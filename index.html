@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0a2540" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Yalın Üretim | Fabrika Mobil Uygulaması</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <button class="icon-btn" id="menuBtn" aria-label="Menü">☰</button>
+    <div class="brand">
+      <div class="brand-logo">⚙️</div>
+      <div class="brand-text">
+        <h1>YALIN ÜRETİM</h1>
+        <span id="pageTitle">Fabrika Operasyon Paneli</span>
+      </div>
+    </div>
+    <button class="icon-btn" id="homeBtn" aria-label="Ana Sayfa">🏠</button>
+  </header>
+
+  <nav class="side-nav" id="sideNav">
+    <div class="nav-header">
+      <span>Araçlar</span>
+      <button class="icon-btn" id="closeNav">✕</button>
+    </div>
+    <div class="nav-section">
+      <h4>📊 Panel</h4>
+      <button class="nav-item" data-route="dashboard">📈 Dashboard</button>
+      <button class="nav-item" data-route="reports">📄 Raporlar</button>
+    </div>
+    <div class="nav-section">
+      <h4>🧠 Problem Çözme</h4>
+      <button class="nav-item" data-route="why5">❓ 5 Neden Analizi</button>
+      <button class="nav-item" data-route="fishbone">🐟 Balık Kılçığı</button>
+      <button class="nav-item" data-route="pareto">📊 Pareto Analizi</button>
+      <button class="nav-item" data-route="a3">📋 A3 Rapor</button>
+      <button class="nav-item" data-route="pdca">🔄 PDCA</button>
+      <button class="nav-item" data-route="rca">🔍 Kök Neden Analizi</button>
+    </div>
+    <div class="nav-section">
+      <h4>🏭 Yalın Üretim</h4>
+      <button class="nav-item" data-route="takt">⏱️ Takt Zamanı</button>
+      <button class="nav-item" data-route="oee">📊 OEE / TPM</button>
+      <button class="nav-item" data-route="smed">⚡ SMED</button>
+      <button class="nav-item" data-route="vsm">🗺️ VSM - Değer Akışı</button>
+      <button class="nav-item" data-route="fives">✅ 5S Denetimi</button>
+      <button class="nav-item" data-route="kanban">🃏 Kanban Panosu</button>
+      <button class="nav-item" data-route="andon">🚦 Andon Sistemi</button>
+      <button class="nav-item" data-route="heijunka">📦 Heijunka</button>
+      <button class="nav-item" data-route="kaizen">💡 Kaizen</button>
+      <button class="nav-item" data-route="muda">🗑️ Muda/Mura/Muri</button>
+      <button class="nav-item" data-route="pokayoke">🛡️ Poka-Yoke</button>
+      <button class="nav-item" data-route="jit">⏳ JIT - Tam Zamanında</button>
+      <button class="nav-item" data-route="jidoka">🤖 Jidoka</button>
+      <button class="nav-item" data-route="sqdcp">🪪 SQDCP Panosu</button>
+      <button class="nav-item" data-route="gemba">👣 Gemba Yürüyüşü</button>
+      <button class="nav-item" data-route="asakai">🌅 Asakai</button>
+    </div>
+    <div class="nav-footer">
+      <small>v1.0 • Offline Destekli</small>
+    </div>
+  </nav>
+  <div class="nav-backdrop" id="navBackdrop"></div>
+
+  <main id="app" class="app-main"></main>
+
+  <nav class="bottom-nav">
+    <button class="bn-item active" data-route="dashboard"><span>📈</span><small>Panel</small></button>
+    <button class="bn-item" data-route="andon"><span>🚦</span><small>Andon</small></button>
+    <button class="bn-item" data-route="kanban"><span>🃏</span><small>Kanban</small></button>
+    <button class="bn-item" data-route="kaizen"><span>💡</span><small>Kaizen</small></button>
+    <button class="bn-item" data-route="reports"><span>📄</span><small>Rapor</small></button>
+  </nav>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/reports.js"></script>
+  <script src="js/tools/why5.js"></script>
+  <script src="js/tools/fishbone.js"></script>
+  <script src="js/tools/pareto.js"></script>
+  <script src="js/tools/a3.js"></script>
+  <script src="js/tools/pdca.js"></script>
+  <script src="js/tools/rca.js"></script>
+  <script src="js/tools/takt.js"></script>
+  <script src="js/tools/oee.js"></script>
+  <script src="js/tools/smed.js"></script>
+  <script src="js/tools/vsm.js"></script>
+  <script src="js/tools/fives.js"></script>
+  <script src="js/tools/kanban.js"></script>
+  <script src="js/tools/andon.js"></script>
+  <script src="js/tools/heijunka.js"></script>
+  <script src="js/tools/kaizen.js"></script>
+  <script src="js/tools/muda.js"></script>
+  <script src="js/tools/pokayoke.js"></script>
+  <script src="js/tools/jit.js"></script>
+  <script src="js/tools/jidoka.js"></script>
+  <script src="js/tools/sqdcp.js"></script>
+  <script src="js/tools/gemba.js"></script>
+  <script src="js/tools/asakai.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
