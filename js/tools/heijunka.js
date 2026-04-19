@@ -23,6 +23,8 @@ const Heijunka = {
         <div id="metrics" style="margin-top:10px"></div>
       </div>
 
+      <div id="analyzeWrap"></div>
+
       <div class="btn-row">
         <button class="btn btn-success" id="saveBtn">💾 Kaydet</button>
         <button class="btn btn-outline" id="clearBtn">🗑️ Temizle</button>
@@ -51,6 +53,7 @@ const Heijunka = {
     root.querySelector("#clearBtn").onclick = () => this.clearForm(root);
     this.renderTable(root);
     this.renderList(root);
+    this.renderAnalysis(root);
   },
   renderTable(root) {
     const wrap = root.querySelector("#tableWrap");
@@ -113,6 +116,7 @@ const Heijunka = {
         <div class="kpi success"><div class="label">Dengeleme</div><div class="value">${leveling}%</div></div>
       </div>
     `;
+    this.renderAnalysis(root);
   },
   renderList(root) {
     const wrap = root.querySelector("#listWrap");
@@ -163,5 +167,60 @@ const Heijunka = {
     else Storage.add(this.KEY, data);
     UI.toast("Kaydedildi", "success");
     this.render(root);
+  },
+
+  computeDaily(products) {
+    const daily = [0,0,0,0,0,0,0];
+    (products || []).forEach(p => {
+      (p.qty || []).forEach((q, i) => { daily[i] = (daily[i] || 0) + (+q || 0); });
+    });
+    return daily;
+  },
+
+  analyze(records) {
+    records = records || Storage.getAll(this.KEY);
+    const insights = [], text = [];
+    // Prefer current state if exists
+    let products = null;
+    if (this.state && this.state.products && this.state.products.length) {
+      const hasData = this.state.products.some(p => (p.qty || []).some(q => (+q || 0) > 0));
+      if (hasData) products = this.state.products;
+    }
+    if (!products && records.length) {
+      const latest = records[records.length - 1];
+      products = latest.products || [];
+    }
+    if (!products || !products.length) return { insights: [], text: ["Kayıt yok."] };
+    const daily = this.computeDaily(products);
+    const total = daily.reduce((s, x) => s + x, 0);
+    if (total <= 0) return { insights: [Analyze.insight("info", "Miktar yok", "Günlük üretim miktarlarını girin.")], text: ["Miktar yok."] };
+    const avg = total / 7;
+    const variance = daily.reduce((s, x) => s + Math.pow(x - avg, 2), 0) / 7;
+    const std = Math.sqrt(variance);
+    const cv = avg > 0 ? (std / avg) * 100 : 0;
+    const max = Math.max(...daily);
+    const min = Math.min(...daily);
+    const leveling = avg > 0 ? (1 - std / avg) * 100 : 0;
+    if (cv < 10) insights.push(Analyze.insight("success", `Seviyelendirme mükemmel (CV %${cv.toFixed(1)})`, "Günlük üretim dalgalanması çok düşük."));
+    else if (cv < 25) insights.push(Analyze.insight("warn", `Seviyelendirme orta (CV %${cv.toFixed(1)})`, "Biraz daha dengeleme faydalı olur."));
+    else insights.push(Analyze.insight("danger", `Seviyelendirme zayıf (CV %${cv.toFixed(1)})`, "Büyük dalgalanma; 'Otomatik Dengele' ile başlayın."));
+    text.push(`CV: %${cv.toFixed(1)} (std ${std.toFixed(1)})`);
+    insights.push(Analyze.insight("info", `Dengeleme skoru: %${leveling.toFixed(1)}`, `Max/Min: ${max}/${min} • Ortalama: ${avg.toFixed(1)} • Haftalık: ${total}`));
+    text.push(`Max/Min: ${max}/${min}, ort ${avg.toFixed(1)}`);
+    const spread = max - min;
+    if (spread > avg * 0.5 && avg > 0) {
+      insights.push(Analyze.insight("action", `Günlük fark ${spread} adet`, "En yoğun gün en düşükten çok fazla; Heijunka kutusu ile ritim oluşturun."));
+    }
+    return { insights, text };
+  },
+
+  renderAnalysis(root) {
+    const wrap = root.querySelector("#analyzeWrap");
+    if (!wrap) return;
+    const records = Storage.getAll(this.KEY);
+    const hasLive = this.state && this.state.products && this.state.products.some(p => (p.qty || []).some(q => (+q || 0) > 0));
+    if (!records.length && !hasLive) { wrap.innerHTML = Analyze.empty("📦", "Plan girin, analiz otomatik oluşur."); return; }
+    const a = this.analyze(records);
+    wrap.innerHTML = Analyze.card("🔍", "Heijunka Otomatik Analizi", "", a.insights.join(""));
   }
 };

@@ -192,5 +192,67 @@ const VSM = {
     else Storage.add(this.KEY, data);
     UI.toast("Kaydedildi", "success");
     this.render(root);
+  },
+
+  analyze(records) {
+    records = records || Storage.getAll(this.KEY);
+    const insights = [], text = [];
+    // Use latest record if available, otherwise current state if present
+    let nodes = [];
+    if (records && records.length) {
+      const latest = records[records.length - 1];
+      nodes = latest.nodes || [];
+    } else if (this.state && this.state.nodes && this.state.nodes.length) {
+      nodes = this.state.nodes;
+    } else {
+      return { insights: [], text: ["Kayıt yok."] };
+    }
+    if (!nodes.length) {
+      return { insights: [Analyze.insight("info", "Düğüm yok", "Akışa en az bir düğüm ekleyin.")], text: ["Düğüm yok."] };
+    }
+    const totalCT = nodes.reduce((s, n) => s + (+n.ct || 0), 0);
+    const totalLTsec = nodes.reduce((s, n) => s + (+n.lt || 0) * 60, 0);
+    const leadTime = totalCT + totalLTsec;
+    const vaTime = nodes.filter(n => n.va).reduce((s, n) => s + (+n.ct || 0), 0);
+    const nvaTime = leadTime - vaTime;
+    const pct = leadTime > 0 ? (vaTime / leadTime) * 100 : 0;
+    if (leadTime <= 0) {
+      insights.push(Analyze.insight("warn", "Süre verisi yok", "Çevrim ve bekleme sürelerini girin."));
+      return { insights, text: ["Süre verisi yok."] };
+    }
+    if (pct >= 25) insights.push(Analyze.insight("success", `VA oranı %${pct.toFixed(1)} — İyi seviye`, "25% üstü yalın akış için iyi bir göstergedir."));
+    else if (pct >= 5) insights.push(Analyze.insight("warn", `VA oranı %${pct.toFixed(1)} — Tipik`, "Çoğu işletmede %5 civarındadır; hedef %25 üzeri."));
+    else insights.push(Analyze.insight("danger", `VA oranı %${pct.toFixed(1)} — Düşük`, "Değer katmayan süre baskın; NVA düğümlerini azaltın."));
+    text.push(`VA: %${pct.toFixed(1)} (${vaTime.toFixed(0)}/${leadTime.toFixed(0)} sn)`);
+
+    // Dominant NVA source by type
+    const byType = { process: 0, inventory: 0, transport: 0 };
+    nodes.forEach(n => {
+      const contrib = (+n.ct || 0) + (+n.lt || 0) * 60;
+      const isNVA = !n.va;
+      if (isNVA) byType[n.type || "process"] = (byType[n.type || "process"] || 0) + contrib;
+    });
+    const typeName = { process: "Proses", inventory: "Stok", transport: "Taşıma" };
+    const sortedTypes = Object.entries(byType).sort((a, b) => b[1] - a[1]);
+    if (sortedTypes[0] && sortedTypes[0][1] > 0) {
+      const [tk, tv] = sortedTypes[0];
+      insights.push(Analyze.insight("action", `Baskın NVA kaynağı: ${typeName[tk] || tk}`, `${tv.toFixed(0)} sn NVA bu kategoriden. Öncelikle bu alana muda analizi uygulayın.`));
+      text.push(`Baskın NVA: ${typeName[tk] || tk} (${tv.toFixed(0)} sn)`);
+    }
+    const nvaCount = nodes.filter(n => !n.va).length;
+    if (nvaCount > 0) {
+      insights.push(Analyze.insight("info", `${nvaCount} NVA düğümü / ${nodes.length} toplam`, "NVA düğümleri değer katmıyor; ortadan kaldırma veya azaltma adayıdır."));
+    }
+    return { insights, text };
+  },
+
+  renderAnalysis(root) {
+    const wrap = root.querySelector("#analyzeWrap");
+    if (!wrap) return;
+    const records = Storage.getAll(this.KEY);
+    const hasCurrent = this.state && this.state.nodes && this.state.nodes.length;
+    if (!records.length && !hasCurrent) { wrap.innerHTML = Analyze.empty("🗺️", "Düğüm ekleyin veya kaydedin, analiz otomatik oluşur."); return; }
+    const a = this.analyze(hasCurrent ? [{ nodes: this.state.nodes }] : records);
+    wrap.innerHTML = Analyze.card("🔍", "VSM Otomatik Analizi", "", a.insights.join(""));
   }
 };

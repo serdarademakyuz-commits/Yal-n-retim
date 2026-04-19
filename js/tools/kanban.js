@@ -75,8 +75,11 @@ const Kanban = {
         <h3>🃏 Pano</h3>
         <div class="kanban-board" id="board"></div>
       </div>
+
+      <div id="analyzeWrap"></div>
     `;
     this.renderBoard(root);
+    this.renderAnalysis(root);
     root.querySelector("#saveBtn").onclick = () => this.save(root);
     root.querySelector("#clearBtn").onclick = () => this.clearForm(root);
     root.querySelector("#calcKanban").onclick = () => this.calcKanban(root);
@@ -89,6 +92,7 @@ const Kanban = {
       this.setWIP(w);
       UI.toast("WIP limitleri kaydedildi", "success");
       this.renderBoard(root);
+      this.renderAnalysis(root);
     };
   },
   calcKanban(root) {
@@ -118,6 +122,7 @@ const Kanban = {
   },
   renderBoard(root) {
     const board = root.querySelector("#board");
+    if (!board) return;
     const list = Storage.getAll(this.KEY);
     const wip = this.getWIP();
     board.innerHTML = this.COLS.map(c => {
@@ -163,9 +168,10 @@ const Kanban = {
         }
         Storage.update(this.KEY, id, { col: targetCol });
         this.renderBoard(root);
+        this.renderAnalysis(root);
       });
       card.querySelector("[data-action=del]").onclick = () => {
-        if (UI.confirm("Kart silinsin mi?")) { Storage.remove(this.KEY, id); UI.toast("Silindi", "danger"); this.renderBoard(root); }
+        if (UI.confirm("Kart silinsin mi?")) { Storage.remove(this.KEY, id); UI.toast("Silindi", "danger"); this.renderBoard(root); this.renderAnalysis(root); }
       };
       card.querySelector("[data-action=edit]").onclick = () => {
         const it = Storage.getOne(this.KEY, id);
@@ -214,5 +220,57 @@ const Kanban = {
     UI.toast("Kart kaydedildi", "success");
     this.clearForm(root);
     this.renderBoard(root);
+    this.renderAnalysis(root);
+  },
+
+  analyze(records) {
+    records = records || Storage.getAll(this.KEY);
+    const insights = [], text = [];
+    const wip = this.getWIP();
+    if (!records.length) return { insights: [], text: ["Kayıt yok."] };
+    const dist = { todo: 0, doing: 0, done: 0 };
+    records.forEach(r => { const c = r.col || "todo"; dist[c] = (dist[c] || 0) + 1; });
+    // WIP violations
+    let violations = 0;
+    const violDetails = [];
+    this.COLS.forEach(c => {
+      const cnt = dist[c.k] || 0;
+      const lim = wip[c.k] || 0;
+      if (lim > 0 && cnt > lim) {
+        violations++;
+        violDetails.push(`${c.n}: ${cnt}/${lim}`);
+      }
+    });
+    insights.push(Analyze.insight("info", `Dağılım — Yapılacak: ${dist.todo} • Devam: ${dist.doing} • Tamam: ${dist.done}`,
+      `Toplam ${records.length} kart.`));
+    text.push(`Dağılım: Todo ${dist.todo}, Doing ${dist.doing}, Done ${dist.done}`);
+    if (violations > 0) {
+      insights.push(Analyze.insight("danger", `${violations} kolonda WIP limiti aşıldı`, violDetails.join(" • ")));
+      text.push(`WIP ihlali: ${violations}`);
+    } else {
+      insights.push(Analyze.insight("success", "WIP limitleri ihlal edilmemiş", "Akış disiplini korunuyor."));
+    }
+    // Flow balance: doing should be limited relative to todo/done
+    if (dist.doing > 0 && (dist.doing > dist.todo * 2 || dist.doing > dist.done * 2)) {
+      insights.push(Analyze.insight("warn", "Devam eden işler yoğun", "WIP limiti ile akışı dengeleyin; Little Yasası: WIP = Throughput × Lead Time."));
+    }
+    if (dist.todo > 0 && dist.doing === 0 && dist.done === 0) {
+      insights.push(Analyze.insight("action", "Sadece 'Yapılacak' dolu", "İşleri Devam'a alarak akışı başlatın."));
+    }
+    // Priority distribution
+    const highs = records.filter(x => x.priority === "high").length;
+    if (highs > 0) {
+      insights.push(Analyze.insight("warn", `${highs} yüksek öncelikli kart`, "Yüksek öncelikliler akışın başında mı? Önce bunları bitirmeye odaklanın."));
+    }
+    return { insights, text };
+  },
+
+  renderAnalysis(root) {
+    const wrap = root.querySelector("#analyzeWrap");
+    if (!wrap) return;
+    const records = Storage.getAll(this.KEY);
+    if (!records.length) { wrap.innerHTML = Analyze.empty("🃏", "Kart ekleyin, analiz otomatik oluşur."); return; }
+    const a = this.analyze(records);
+    wrap.innerHTML = Analyze.card("🔍", "Kanban Otomatik Analizi", "", a.insights.join(""));
   }
 };

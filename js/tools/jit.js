@@ -36,15 +36,18 @@ const JIT = {
         <div id="result"><div class="empty"><div class="empty-icon">⏳</div><div>"Hesapla"ya basın.</div></div></div>
       </div>
 
+      <div id="analyzeWrap"></div>
+
       <div class="card">
         <h3>📋 Kayıtlar (${list.length})</h3>
         <div id="listWrap"></div>
       </div>
     `;
-    root.querySelector("#calcBtn").onclick = () => this.calc(root);
+    root.querySelector("#calcBtn").onclick = () => { this.calc(root); this.renderAnalysis(root); };
     root.querySelector("#saveBtn").onclick = () => this.save(root);
     root.querySelector("#clearBtn").onclick = () => this.clearForm(root);
     this.renderList(root);
+    this.renderAnalysis(root);
   },
   calc(root) {
     const daily = +root.querySelector("#daily").value || 0;

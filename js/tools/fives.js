@@ -42,6 +42,8 @@ const Fives = {
         <div id="score"></div>
       </div>
 
+      <div id="analyzeWrap"></div>
+
       <div class="btn-row">
         <button class="btn btn-success" id="saveBtn">💾 Kaydet</button>
         <button class="btn btn-outline" id="clearBtn">🗑️ Temizle</button>
@@ -61,6 +63,7 @@ const Fives = {
     root.querySelector("#saveBtn").onclick = () => this.save(root);
     root.querySelector("#clearBtn").onclick = () => this.clearForm(root);
     this.renderList(root);
+    this.renderAnalysis(root);
   },
   renderScore(root) {
     const scores = this.CATS.map(c => +root.querySelector("#r-" + c.k).value);
@@ -147,5 +150,53 @@ const Fives = {
     else Storage.add(this.KEY, data);
     UI.toast("Kaydedildi", "success");
     this.render(root);
+  },
+
+  analyze(records) {
+    records = records || Storage.getAll(this.KEY);
+    if (!records.length) return { insights: [], text: ["Kayıt yok."] };
+    const insights = [], text = [];
+    const latest = records[records.length - 1];
+    const scores = latest.scores || {};
+    // Weakest S
+    const entries = this.CATS.map(c => ({ k: c.k, n: c.n, v: +scores[c.k] || 0 }));
+    entries.sort((a, b) => a.v - b.v);
+    const weakest = entries[0];
+    const total = entries.reduce((s, x) => s + x.v, 0);
+    const pct = (total / 20) * 100;
+    if (pct >= 80) insights.push(Analyze.insight("success", `5S skoru %${pct.toFixed(0)} — Mükemmel`, "Standartlar iyi kurulmuş; disiplini sürdürün."));
+    else if (pct >= 60) insights.push(Analyze.insight("warn", `5S skoru %${pct.toFixed(0)} — İyi ama geliştirilebilir`, "Standartlaştırma ve disiplin üzerine yoğunlaşın."));
+    else insights.push(Analyze.insight("danger", `5S skoru %${pct.toFixed(0)} — Aksiyon gerekli`, "60% altı ciddi eksiklik; temel 3S (Ayıkla-Düzenle-Temizle) öncelikli."));
+    text.push(`5S skoru: %${pct.toFixed(0)} (${total}/20)`);
+    if (weakest) {
+      insights.push(Analyze.insight("action", `En zayıf adım: ${weakest.n}`, `Puan: ${weakest.v}/4. Bu adıma özel aksiyon planı oluşturun.`));
+      text.push(`Zayıf adım: ${weakest.n} (${weakest.v}/4)`);
+    }
+    const zeros = entries.filter(e => e.v === 0);
+    if (zeros.length) {
+      insights.push(Analyze.insight("danger", `${zeros.length} adımda hiç uygulama yok`, zeros.map(z => z.n).join(", ")));
+    }
+    // Trend
+    if (records.length > 1) {
+      const prev = records[records.length - 2];
+      const prevTotal = Object.values(prev.scores || {}).reduce((s, x) => s + (+x || 0), 0);
+      const delta = total - prevTotal;
+      if (delta !== 0) {
+        insights.push(Analyze.insight(delta > 0 ? "success" : "danger", `Önceki denetime göre ${delta > 0 ? "+" : ""}${delta} puan`, delta > 0 ? "İyileşme gözlendi." : "Gerileme var; kök neden analizi yapın."));
+      }
+      // Trend across all records
+      const avg = records.reduce((s, r) => s + (+r.total || 0), 0) / records.length;
+      insights.push(Analyze.insight("info", `Ortalama skor: ${avg.toFixed(1)}/20`, `${records.length} denetim kaydından.`));
+    }
+    return { insights, text };
+  },
+
+  renderAnalysis(root) {
+    const wrap = root.querySelector("#analyzeWrap");
+    if (!wrap) return;
+    const records = Storage.getAll(this.KEY);
+    if (!records.length) { wrap.innerHTML = Analyze.empty("✅", "5S denetimi kaydedin, analiz otomatik oluşur."); return; }
+    const a = this.analyze(records);
+    wrap.innerHTML = Analyze.card("🔍", "5S Otomatik Analizi", "", a.insights.join(""));
   }
 };
