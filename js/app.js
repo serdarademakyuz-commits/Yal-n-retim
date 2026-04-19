@@ -1,8 +1,10 @@
 /* Router and app bootstrap */
 const Router = (function () {
   const routes = {
-    dashboard: { title: "Fabrika Operasyon Paneli", render: (r) => Dashboard.render(r) },
-    reports:   { title: "Raporlar",                 render: (r) => Reports.render(r) },
+    dashboard:  { title: "Fabrika Operasyon Paneli",  render: (r) => Dashboard.render(r) },
+    tools:      { title: "Yalın Üretim Araçları",     render: (r) => Categories.renderTools(r) },
+    techniques: { title: "Problem Çözme Teknikleri",  render: (r) => Categories.renderTechniques(r) },
+    reports:    { title: "Raporlar",                  render: (r) => Reports.render(r) },
     why5:      { title: "5 Neden Analizi",          render: (r) => Why5.render(r) },
     fishbone:  { title: "Balık Kılçığı Diyagramı",  render: (r) => Fishbone.render(r) },
     pareto:    { title: "Pareto Analizi",           render: (r) => Pareto.render(r) },
