@@ -89,8 +89,14 @@ const Pareto = {
       return;
     }
     const sorted = [...this.state.items].sort((x, y) => y.val - x.val);
-    const total = sorted.reduce((s, x) => s + x.val, 0) || 1;
-    const max = sorted[0].val;
+    const rawTotal = sorted.reduce((s, x) => s + x.val, 0);
+    if (rawTotal <= 0) {
+      c.innerHTML = UI.emptyState("📊", "Sıfırdan büyük değer girin, grafik oluşsun.");
+      a.innerHTML = "";
+      return;
+    }
+    const total = rawTotal;
+    const max = sorted[0].val || 1;
     let cum = 0;
     let vital = [];
     const withPct = sorted.map(x => {

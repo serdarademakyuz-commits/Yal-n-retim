@@ -50,13 +50,15 @@ const Takt = {
     this.renderList(root);
   },
   calc(root) {
-    const shifts = +root.querySelector("#shifts").value || 1;
-    const shiftMin = +root.querySelector("#shiftMin").value || 0;
+    const shifts = +root.querySelector("#shifts").value;
+    const shiftMin = +root.querySelector("#shiftMin").value;
     const breakMin = +root.querySelector("#breakMin").value || 0;
     const planned = +root.querySelector("#plannedDown").value || 0;
-    const demand = +root.querySelector("#demand").value || 0;
+    const demand = +root.querySelector("#demand").value;
     const netMin = shifts * shiftMin - breakMin - planned;
-    if (netMin <= 0 || demand <= 0) { UI.toast("Geçerli değer girin", "danger"); return null; }
+    if (shifts <= 0 || shiftMin <= 0 || demand <= 0 || netMin <= 0) {
+      UI.toast("Geçerli pozitif değerler girin", "danger"); return null;
+    }
     const taktSec = (netMin * 60) / demand;
     const taktMin = taktSec / 60;
     const hourlyRate = 60 / taktMin;
