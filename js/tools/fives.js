@@ -28,10 +28,10 @@ const Fives = {
           <div class="fives-cat">
             <div class="fc-head">
               <span>${c.n}</span>
-              <strong id="val-${c.k}">5</strong>
+              <strong id="val-${c.k}">2</strong>
             </div>
-            <small style="color:var(--muted)">${c.d}</small>
-            <input type="range" min="0" max="10" value="5" id="r-${c.k}" style="margin-top:8px">
+            <small style="color:var(--muted)">${c.d} • 0=Yok, 1=Zayıf, 2=Orta, 3=İyi, 4=Mükemmel</small>
+            <input type="range" min="0" max="4" value="2" id="r-${c.k}" style="margin-top:8px">
             <textarea id="n-${c.k}" placeholder="Bulgular, öneriler" style="margin-top:6px"></textarea>
           </div>
         </div>
@@ -65,11 +65,11 @@ const Fives = {
   renderScore(root) {
     const scores = this.CATS.map(c => +root.querySelector("#r-" + c.k).value);
     const total = scores.reduce((s, x) => s + x, 0);
-    const pct = (total / 50) * 100;
+    const pct = (total / 20) * 100;
     const color = pct >= 80 ? "success" : pct >= 60 ? "amber" : "danger";
     root.querySelector("#score").innerHTML = `
       <div class="kpi-grid">
-        <div class="kpi ${color}"><div class="label">Toplam</div><div class="value">${total}/50</div></div>
+        <div class="kpi ${color}"><div class="label">Toplam</div><div class="value">${total}/20</div></div>
         <div class="kpi"><div class="label">Yüzde</div><div class="value">${pct.toFixed(0)}%</div></div>
       </div>
       <div class="list-item"><div class="li-main">
@@ -105,7 +105,7 @@ const Fives = {
       root.querySelector("#auditor").value = it.auditor || "";
       root.querySelector("#date").value = it.date || "";
       this.CATS.forEach(c => {
-        const s = (it.scores || {})[c.k] ?? 5;
+        const s = (it.scores || {})[c.k] ?? 2;
         root.querySelector("#r-" + c.k).value = s;
         root.querySelector("#val-" + c.k).textContent = s;
         root.querySelector("#n-" + c.k).value = (it.notes || {})[c.k] || "";
@@ -121,8 +121,8 @@ const Fives = {
     root.querySelector("#auditor").value = "";
     root.querySelector("#date").value = "";
     this.CATS.forEach(c => {
-      root.querySelector("#r-" + c.k).value = 5;
-      root.querySelector("#val-" + c.k).textContent = 5;
+      root.querySelector("#r-" + c.k).value = 2;
+      root.querySelector("#val-" + c.k).textContent = 2;
       root.querySelector("#n-" + c.k).value = "";
     });
     this.renderScore(root);

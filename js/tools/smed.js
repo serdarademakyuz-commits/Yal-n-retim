@@ -99,6 +99,7 @@ const SMED = {
     const a = root.querySelector("#analysis");
     const internal = this.state.activities.filter(x => x.type === "internal").reduce((s, x) => s + x.dur, 0);
     const external = this.state.activities.filter(x => x.type === "external").reduce((s, x) => s + x.dur, 0);
+    const totalWork = internal + external;
     const before = +root.querySelector("#before").value;
     const target = +root.querySelector("#target").value;
     const after = internal;
@@ -106,11 +107,16 @@ const SMED = {
     const savPct = before > 0 ? (saving / before) * 100 : 0;
     a.innerHTML = `
       <div class="kpi-grid">
-        <div class="kpi danger"><div class="label">İç Faal. (Durma)</div><div class="value">${internal.toFixed(1)} dk</div></div>
+        <div class="kpi danger"><div class="label">İç Faal. (Makine Durur)</div><div class="value">${internal.toFixed(1)} dk</div></div>
         <div class="kpi success"><div class="label">Dış Faal. (Paralel)</div><div class="value">${external.toFixed(1)} dk</div></div>
         <div class="kpi amber"><div class="label">Yeni Durma</div><div class="value">${after.toFixed(1)} dk</div></div>
         <div class="kpi"><div class="label">Kazanç</div><div class="value">${saving.toFixed(1)} dk</div><div class="sub">%${savPct.toFixed(1)}</div></div>
       </div>
+      <div class="list-item" style="margin-top:8px"><div class="li-main">
+        <div class="li-title">📐 SMED Prensibi</div>
+        <div class="li-sub">Makine duruşu = sadece iç faaliyetler. Dış faaliyetler (${external.toFixed(1)} dk) makine çalışırken yapılır.</div>
+        <div class="li-sub">Toplam iş yükü: ${totalWork.toFixed(1)} dk (iç + dış)</div>
+      </div></div>
       ${after <= target ? '<div class="list-item" style="background:#dcfce7"><div class="li-main"><div class="li-title">✅ Hedefe ulaşıldı</div></div></div>'
                         : `<div class="list-item" style="background:#fef3c7"><div class="li-main"><div class="li-title">⚠️ Hedef: ${target} dk, ${(after - target).toFixed(1)} dk fazla</div></div></div>`}
     `;

@@ -111,20 +111,26 @@ const VSM = {
     const totalCT = this.state.nodes.reduce((s, n) => s + (n.ct || 0), 0);
     const totalLT = this.state.nodes.reduce((s, n) => s + (n.lt || 0) * 60, 0);
     const vaTime = this.state.nodes.filter(n => n.va).reduce((s, n) => s + (n.ct || 0), 0);
-    const pct = totalCT + totalLT > 0 ? (vaTime / (totalCT + totalLT)) * 100 : 0;
+    const leadTime = totalCT + totalLT;
+    const nvaTime = leadTime - vaTime;
+    const pct = leadTime > 0 ? (vaTime / leadTime) * 100 : 0;
     const demand = +root.querySelector("#demand").value || 0;
     const avail = +root.querySelector("#avail").value || 0;
     const takt = demand > 0 ? avail / demand : 0;
     m.innerHTML = `
       <div class="kpi-grid">
         <div class="kpi success"><div class="label">Toplam VA (Değer)</div><div class="value">${vaTime.toFixed(0)} sn</div></div>
-        <div class="kpi danger"><div class="label">Toplam NVA (Kayıp)</div><div class="value">${(totalLT).toFixed(0)} sn</div></div>
-        <div class="kpi amber"><div class="label">Toplam Akış Süresi</div><div class="value">${(totalCT + totalLT).toFixed(0)} sn</div></div>
+        <div class="kpi danger"><div class="label">Toplam NVA (Kayıp)</div><div class="value">${nvaTime.toFixed(0)} sn</div></div>
+        <div class="kpi amber"><div class="label">Toplam Akış Süresi (Lead Time)</div><div class="value">${leadTime.toFixed(0)} sn</div></div>
         <div class="kpi"><div class="label">VA Oranı</div><div class="value">${pct.toFixed(1)}%</div></div>
       </div>
       <div class="list-item" style="margin-top:8px"><div class="li-main">
         <div class="li-title">⏱️ Takt</div>
-        <div class="li-sub">${takt.toFixed(1)} sn/birim • Hedef çevrim süresi</div>
+        <div class="li-sub">${takt.toFixed(1)} sn/birim • Hedef çevrim süresi (Net Süre / Talep)</div>
+      </div></div>
+      <div class="list-item"><div class="li-main">
+        <div class="li-title">📐 Formüller</div>
+        <div class="li-sub">Lead Time = Σ CT + Σ Bekleme • VA Oranı = VA / Lead Time</div>
       </div></div>
     `;
   },
