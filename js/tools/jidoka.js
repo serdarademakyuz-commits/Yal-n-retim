@@ -35,6 +35,8 @@ const Jidoka = {
         </div>
       </div>
 
+      <div id="analyzeWrap"></div>
+
       <div class="card">
         <h3>📋 Olaylar (${list.length})</h3>
         <div id="listWrap"></div>
@@ -43,6 +45,7 @@ const Jidoka = {
     root.querySelector("#saveBtn").onclick = () => this.save(root);
     root.querySelector("#clearBtn").onclick = () => this.clearForm(root);
     this.renderList(root);
+    this.renderAnalysis(root);
   },
   renderList(root) {
     const wrap = root.querySelector("#listWrap");
@@ -94,5 +97,36 @@ const Jidoka = {
     else Storage.add(this.KEY, d);
     UI.toast("Kaydedildi", "success");
     this.render(root);
+  },
+
+  analyze(records) {
+    records = records || Storage.getAll(this.KEY);
+    if (!records.length) return { insights: [], text: ["Kayıt yok."] };
+    const insights = [], text = [];
+    const open = records.filter(r => r.status === "open").length;
+    const inv = records.filter(r => r.status === "investigating").length;
+    const res = records.filter(r => r.status === "resolved").length;
+    insights.push(Analyze.insight("info", `${records.length} Jidoka olayı`, `Açık: ${open}, İnceleniyor: ${inv}, Çözüldü: ${res}`));
+    text.push(`open=${open}, investigating=${inv}, resolved=${res}`);
+    const totalDowntime = records.reduce((s, r) => s + (+r.downtime || 0), 0);
+    const totalAffected = records.reduce((s, r) => s + (+r.affected || 0), 0);
+    if (totalDowntime > 0) insights.push(Analyze.insight("warn", `Toplam duruş: ${totalDowntime} dk`, `Etkilenen adet: ${totalAffected}. OEE Availability üzerinde doğrudan etkili.`));
+    if (open + inv > res && records.length > 3) insights.push(Analyze.insight("danger", `${open + inv} olay hala açık`, "Jidoka 'Dur-Düzelt-Devam' disiplini gerektirir — açık olayları kapatın."));
+    const machineCount = {};
+    records.forEach(r => { if (r.machine) machineCount[r.machine] = (machineCount[r.machine] || 0) + 1; });
+    const topMachine = Object.entries(machineCount).sort((a, b) => b[1] - a[1])[0];
+    if (topMachine && topMachine[1] > 1) insights.push(Analyze.insight("action", `En çok arızalı: ${topMachine[0]} (${topMachine[1]})`, "Bu makinede RCA/TPM uygulayın; tekrarlayan arıza yapısaldır."));
+    const withoutCause = records.filter(r => !r.cause || r.cause.length < 3).length;
+    if (withoutCause > 0) insights.push(Analyze.insight("warn", `${withoutCause} olay kök nedensiz`, "5 Neden ile kök nedeni bulun, aksi halde olay tekrar eder."));
+    return { insights, text };
+  },
+
+  renderAnalysis(root) {
+    const wrap = root.querySelector("#analyzeWrap");
+    if (!wrap) return;
+    const records = Storage.getAll(this.KEY);
+    if (!records.length) { wrap.innerHTML = Analyze.empty("🤖", "Jidoka olayı kaydedin, analiz otomatik çıkar."); return; }
+    const a = this.analyze(records);
+    wrap.innerHTML = Analyze.card("🔍", "Jidoka Otomatik Analizi", "", a.insights.join(""));
   }
 };

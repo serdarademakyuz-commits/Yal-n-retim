@@ -58,6 +58,8 @@ const Andon = {
         <h3>📜 Çözümlenenler (${list.length - active.length})</h3>
         <div id="resolvedWrap"></div>
       </div>
+
+      <div id="analyzeWrap"></div>
     `;
     root.querySelectorAll(".andon-light").forEach(el => el.onclick = () => {
       root.querySelector("#level").value = el.dataset.level;
@@ -66,6 +68,7 @@ const Andon = {
     root.querySelector("#saveBtn").onclick = () => this.save(root);
     root.querySelector("#clearBtn").onclick = () => this.clearForm(root);
     this.renderLists(root);
+    this.renderAnalysis(root);
   },
   renderLists(root) {
     const list = Storage.getAll(this.KEY);
@@ -142,5 +145,52 @@ const Andon = {
     else Storage.add(this.KEY, data);
     UI.toast("Andon bildirildi", "success");
     this.render(root);
+  },
+
+  analyze(records) {
+    records = records || Storage.getAll(this.KEY);
+    if (!records.length) return { insights: [], text: ["Kayıt yok."] };
+    const insights = [], text = [];
+    const counts = { red: 0, yellow: 0, blue: 0, green: 0 };
+    records.forEach(r => { counts[r.level] = (counts[r.level] || 0) + 1; });
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    const levelName = { red: "🔴 Acil Durdurma", yellow: "🟡 Uyarı", blue: "🔵 Bilgi", green: "🟢 Normal" };
+    if (sorted[0] && sorted[0][1] > 0) {
+      insights.push(Analyze.insight("info", `En sık olay: ${levelName[sorted[0][0]] || sorted[0][0]}`,
+        `${sorted[0][1]} kayıt. Dağılım: 🔴${counts.red} • 🟡${counts.yellow} • 🔵${counts.blue} • 🟢${counts.green}`));
+      text.push(`En sık: ${sorted[0][0]} (${sorted[0][1]})`);
+    }
+    if (counts.red > 0) {
+      insights.push(Analyze.insight("danger", `${counts.red} kırmızı olay kaydedildi`, "Acil durdurma olayları yüksek etkili; kök neden analizi (5 Neden) uygulayın."));
+      text.push(`Kırmızı: ${counts.red}`);
+    }
+    // Resolve time analysis
+    const resolved = records.filter(r => r.status === "resolved" && r.createdAt && r.resolvedAt);
+    if (resolved.length) {
+      const durMs = resolved.map(r => new Date(r.resolvedAt) - new Date(r.createdAt)).filter(x => x > 0);
+      if (durMs.length) {
+        const avgMin = (durMs.reduce((s, x) => s + x, 0) / durMs.length) / 60000;
+        insights.push(Analyze.insight(avgMin < 15 ? "success" : avgMin < 60 ? "warn" : "danger",
+          `Ortalama çözüm süresi: ${avgMin.toFixed(1)} dk`,
+          `${resolved.length} çözülmüş olaydan. Hedef <15 dk ideal.`));
+        text.push(`Ort. çözüm: ${avgMin.toFixed(1)} dk`);
+      }
+    }
+    const active = records.filter(r => r.status !== "resolved");
+    if (active.length) {
+      insights.push(Analyze.insight("warn", `${active.length} aktif olay var`, "Önce en yüksek seviyedeki olayı çözümleyin."));
+    } else {
+      insights.push(Analyze.insight("success", "Aktif olay yok", "Tüm olaylar çözümlenmiş."));
+    }
+    return { insights, text };
+  },
+
+  renderAnalysis(root) {
+    const wrap = root.querySelector("#analyzeWrap");
+    if (!wrap) return;
+    const records = Storage.getAll(this.KEY);
+    if (!records.length) { wrap.innerHTML = Analyze.empty("🚦", "Olay ekleyin, analiz otomatik oluşur."); return; }
+    const a = this.analyze(records);
+    wrap.innerHTML = Analyze.card("🔍", "Andon Otomatik Analizi", "", a.insights.join(""));
   }
 };

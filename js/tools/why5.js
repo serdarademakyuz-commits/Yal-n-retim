@@ -41,6 +41,8 @@ const Why5 = {
         </div>
       </div>
 
+      <div id="analyzeWrap"></div>
+
       <div class="card">
         <h3>📋 Kayıtlı Analizler (${list.length})</h3>
         <div id="listWrap"></div>
@@ -48,6 +50,7 @@ const Why5 = {
     `;
 
     this.renderList(root);
+    this.renderAnalysis(root);
 
     root.querySelector("#saveBtn").onclick = () => this.save(root);
     root.querySelector("#clearBtn").onclick = () => { this.clearForm(root); UI.toast("Form temizlendi"); };
@@ -125,5 +128,32 @@ const Why5 = {
       UI.toast("Kaydedildi", "success");
     }
     this.render(root);
+  },
+
+  analyze(records) {
+    records = records || Storage.getAll(this.KEY);
+    if (!records.length) return { insights: [], text: ["Kayıt yok."] };
+    const insights = [], text = [];
+    const latest = records[records.length - 1];
+    const filled = (latest.whys || []).filter(w => w && w.length > 3).length;
+    const hasRoot = !!(latest.root && latest.root.length > 3);
+    const hasAction = !!(latest.action && latest.action.length > 3);
+    if (filled === 5) insights.push(Analyze.insight("success", "5 neden seviyesi tamamlandı", "Derin sorgulama yapılmış — kök nedene ulaşma olasılığı yüksek."));
+    else insights.push(Analyze.insight("warn", `${filled}/5 neden dolu`, "En az 5 seviye inerek yüzeysel nedenlerden kaçının."));
+    if (!hasRoot) insights.push(Analyze.insight("danger", "Kök neden yazılmamış", "Son 'neden'in çıkardığı kök nedeni açıkça belirtin."));
+    if (!hasAction) insights.push(Analyze.insight("warn", "Karşı önlem tanımsız", "Kök nedeni ele alan somut aksiyon ekleyin, yoksa problem tekrar eder."));
+    if (hasRoot && hasAction && filled === 5) insights.push(Analyze.insight("success", "Analiz eksiksiz", "PDCA ile aksiyonları uygulayıp izleyin."));
+    insights.push(Analyze.insight("info", `${records.length} kayıtlı analiz`, "Tekrar eden kök nedenleri Pareto ile değerlendirin."));
+    text.push(`${filled}/5 neden, kök: ${hasRoot ? "var" : "yok"}, aksiyon: ${hasAction ? "var" : "yok"}`);
+    return { insights, text };
+  },
+
+  renderAnalysis(root) {
+    const wrap = root.querySelector("#analyzeWrap");
+    if (!wrap) return;
+    const records = Storage.getAll(this.KEY);
+    if (!records.length) { wrap.innerHTML = Analyze.empty("❓", "Analiz kaydedin, otomatik yorum çıkar."); return; }
+    const a = this.analyze(records);
+    wrap.innerHTML = Analyze.card("🔍", "5 Neden Analizi Yorumu", "", a.insights.join(""));
   }
 };

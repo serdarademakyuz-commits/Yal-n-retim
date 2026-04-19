@@ -35,6 +35,8 @@ const RCA = {
         </div>
       </div>
 
+      <div id="analyzeWrap"></div>
+
       <div class="card">
         <h3>📋 Kayıtlar (${list.length})</h3>
         <div id="listWrap"></div>
@@ -43,6 +45,7 @@ const RCA = {
     root.querySelector("#saveBtn").onclick = () => this.save(root);
     root.querySelector("#clearBtn").onclick = () => this.clearForm(root);
     this.renderList(root);
+    this.renderAnalysis(root);
   },
   renderList(root) {
     const wrap = root.querySelector("#listWrap");
@@ -93,5 +96,37 @@ const RCA = {
     else Storage.add(this.KEY, d);
     UI.toast("Kaydedildi", "success");
     this.render(root);
+  },
+
+  analyze(records) {
+    records = records || Storage.getAll(this.KEY);
+    if (!records.length) return { insights: [], text: ["RCA yok."] };
+    const insights = [], text = [];
+    const latest = records[records.length - 1];
+    const hasRoot = !!(latest.root && latest.root.length > 3);
+    const hasCorrective = !!(latest.corrective && latest.corrective.length > 3);
+    const hasPreventive = !!(latest.preventive && latest.preventive.length > 3);
+    if (hasRoot && hasCorrective && hasPreventive) insights.push(Analyze.insight("success", "RCA tam", "Kök neden, düzeltici ve önleyici aksiyon tanımlı."));
+    else {
+      if (!hasRoot) insights.push(Analyze.insight("danger", "Kök neden yok", "Semptom yerine asıl nedeni tanımlayın."));
+      if (!hasCorrective) insights.push(Analyze.insight("warn", "Düzeltici aksiyon eksik", "Mevcut problemi çözen aksiyon eklenmeli."));
+      if (!hasPreventive) insights.push(Analyze.insight("warn", "Önleyici aksiyon eksik", "Tekrarı önleyen sistemik aksiyon kritik öneme sahiptir."));
+    }
+    const methodCount = {};
+    records.forEach(r => { if (r.method) methodCount[r.method] = (methodCount[r.method] || 0) + 1; });
+    const topMethod = Object.entries(methodCount).sort((a, b) => b[1] - a[1])[0];
+    if (topMethod) insights.push(Analyze.insight("info", `En çok kullanılan yöntem: ${topMethod[0]}`, `${topMethod[1]} vaka. Tek yönteme aşırı bağlılıksa çeşitlendirin.`));
+    insights.push(Analyze.insight("info", `${records.length} RCA kaydı`, "Benzer kök nedenleri gruplandırıp sistemik çözüm üretin."));
+    text.push(`Kök: ${hasRoot ? "var" : "yok"}, düzeltici: ${hasCorrective ? "var" : "yok"}, önleyici: ${hasPreventive ? "var" : "yok"}`);
+    return { insights, text };
+  },
+
+  renderAnalysis(root) {
+    const wrap = root.querySelector("#analyzeWrap");
+    if (!wrap) return;
+    const records = Storage.getAll(this.KEY);
+    if (!records.length) { wrap.innerHTML = Analyze.empty("🔍", "RCA kaydedin, analiz otomatik çıkar."); return; }
+    const a = this.analyze(records);
+    wrap.innerHTML = Analyze.card("🔍", "RCA Otomatik Analizi", "", a.insights.join(""));
   }
 };

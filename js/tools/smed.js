@@ -183,15 +183,16 @@ const SMED = {
 
   analyze(records) {
     records = records || Storage.getAll(this.KEY);
-    if (!records.length) return { insights: [], text: ["Kayıt yok."] };
+    const liveActs = (this.state && this.state.activities) || [];
+    if (!records.length && !liveActs.length) return { insights: [], text: ["Kayıt yok."] };
     const insights = [], text = [];
-    const latest = records[records.length - 1];
+    const latest = records.length ? records[records.length - 1] : {};
+    const acts = liveActs.length ? liveActs : (latest.activities || []);
+    const after = acts.filter(x => x.type === "internal").reduce((s, x) => s + (+x.dur || 0), 0);
     const before = +latest.before || 0;
-    const after = +latest.after || 0;
     const target = +latest.target || 0;
     const saving = before - after;
     const savPct = before > 0 ? (saving / before) * 100 : 0;
-    const acts = latest.activities || [];
     const internal = acts.filter(x => x.type === "internal").reduce((s, x) => s + (+x.dur || 0), 0);
     const external = acts.filter(x => x.type === "external").reduce((s, x) => s + (+x.dur || 0), 0);
     const totalWork = internal + external;
@@ -225,7 +226,8 @@ const SMED = {
     const wrap = root.querySelector("#analyzeWrap");
     if (!wrap) return;
     const records = Storage.getAll(this.KEY);
-    if (!records.length) { wrap.innerHTML = Analyze.empty("⚡", "SMED analizi kaydedin, otomatik analiz oluşur."); return; }
+    const hasLive = this.state && this.state.activities && this.state.activities.length > 0;
+    if (!records.length && !hasLive) { wrap.innerHTML = Analyze.empty("⚡", "SMED analizi kaydedin, otomatik analiz oluşur."); return; }
     const a = this.analyze(records);
     wrap.innerHTML = Analyze.card("🔍", "SMED Otomatik Analizi", "", a.insights.join(""));
   }

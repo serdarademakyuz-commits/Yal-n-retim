@@ -44,6 +44,8 @@ const Kaizen = {
         <div id="summary"></div>
       </div>
 
+      <div id="analyzeWrap"></div>
+
       <div class="card">
         <h3>📋 Tüm Kaizenler (${list.length})</h3>
         <div id="listWrap"></div>
@@ -53,6 +55,7 @@ const Kaizen = {
     root.querySelector("#clearBtn").onclick = () => this.clearForm(root);
     this.renderSummary(root);
     this.renderList(root);
+    this.renderAnalysis(root);
   },
   renderSummary(root) {
     const list = Storage.getAll(this.KEY);
@@ -123,5 +126,37 @@ const Kaizen = {
     else Storage.add(this.KEY, d);
     UI.toast("Kaydedildi", "success");
     this.render(root);
+  },
+
+  analyze(records) {
+    records = records || Storage.getAll(this.KEY);
+    if (!records.length) return { insights: [], text: ["Kayıt yok."] };
+    const insights = [], text = [];
+    const byStatus = { idea: 0, progress: 0, done: 0 };
+    records.forEach(r => { byStatus[r.status || "idea"]++; });
+    const done = records.filter(r => r.status === "done");
+    const totalTime = done.reduce((s, x) => s + (+x.timeSave || 0), 0);
+    const totalCost = done.reduce((s, x) => s + (+x.costSave || 0), 0);
+    const completionRate = (byStatus.done / records.length) * 100;
+    insights.push(Analyze.insight("info", `${records.length} kaizen (Fikir:${byStatus.idea}, Uygulamada:${byStatus.progress}, Tamamlandı:${byStatus.done})`, `Tamamlanma oranı: %${completionRate.toFixed(0)}`));
+    text.push(`Kaizen: ${records.length}, done=${byStatus.done}, rate=%${completionRate.toFixed(0)}`);
+    if (completionRate < 30) insights.push(Analyze.insight("warn", "Düşük tamamlanma oranı", "Fikirler uygulamaya dönmüyor — sponsorluk ve küçük adımlara bölme gerekli."));
+    else if (completionRate > 70) insights.push(Analyze.insight("success", "Yüksek tamamlanma oranı", "Kaizen kültürü oturmuş. Sonuçları standartlaştırın."));
+    if (totalCost > 0 || totalTime > 0) insights.push(Analyze.insight("success", `Toplam kazanç: ${totalCost.toLocaleString("tr-TR")}₺/ay + ${totalTime.toFixed(0)} dk/gün`, "Gerçekleşen faydayı yönetimle paylaşın."));
+    const catCount = {};
+    records.forEach(r => { if (r.category) catCount[r.category] = (catCount[r.category] || 0) + 1; });
+    const topCat = Object.entries(catCount).sort((a, b) => b[1] - a[1])[0];
+    if (topCat) insights.push(Analyze.insight("info", `Baskın kategori: ${topCat[0]} (${topCat[1]})`, "Diğer kategorilerde de iyileştirme fırsatları arayın."));
+    if (byStatus.idea > byStatus.progress + byStatus.done) insights.push(Analyze.insight("warn", `${byStatus.idea} fikir uygulamaya geçmedi`, "Haftalık 1 fikir → Uygulamaya hedefi koyun."));
+    return { insights, text };
+  },
+
+  renderAnalysis(root) {
+    const wrap = root.querySelector("#analyzeWrap");
+    if (!wrap) return;
+    const records = Storage.getAll(this.KEY);
+    if (!records.length) { wrap.innerHTML = Analyze.empty("💡", "Kaizen kaydedin, analiz otomatik çıkar."); return; }
+    const a = this.analyze(records);
+    wrap.innerHTML = Analyze.card("🔍", "Kaizen Otomatik Analizi", "", a.insights.join(""));
   }
 };

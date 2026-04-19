@@ -60,6 +60,8 @@ const Asakai = {
         <button class="btn btn-outline" id="clearBtn">🗑️ Temizle</button>
       </div>
 
+      <div id="analyzeWrap"></div>
+
       <div class="card" style="margin-top:12px">
         <h3>📋 Geçmiş Toplantılar (${list.length})</h3>
         <div id="listWrap"></div>
@@ -78,6 +80,7 @@ const Asakai = {
     root.querySelector("#clearBtn").onclick = () => this.clearForm(root);
     this.renderActs(root);
     this.renderList(root);
+    this.renderAnalysis(root);
   },
   renderActs(root) {
     const wrap = root.querySelector("#actsWrap");
@@ -151,5 +154,38 @@ const Asakai = {
     else Storage.add(this.KEY, data);
     UI.toast("Kaydedildi", "success");
     this.render(root);
+  },
+
+  analyze(records) {
+    records = records || Storage.getAll(this.KEY);
+    if (!records.length) return { insights: [], text: ["Kayıt yok."] };
+    const insights = [], text = [];
+    const withBlocker = records.filter(r => r.blockers && r.blockers.trim().length > 3).length;
+    const blockerRatio = (withBlocker / records.length) * 100;
+    const totalActions = records.reduce((s, r) => s + ((r.agenda || []).length), 0);
+    const avgActions = totalActions / records.length;
+    insights.push(Analyze.insight("info", `${records.length} Asakai, ${totalActions} aksiyon`, `Ortalama ${avgActions.toFixed(1)} aksiyon/toplantı. Engelli toplantı: ${withBlocker} (%${blockerRatio.toFixed(0)})`));
+    text.push(`asakai=${records.length}, actions=${totalActions}, blockers=${withBlocker}`);
+    if (avgActions < 1) insights.push(Analyze.insight("warn", "Aksiyon üretimi düşük", "Asakai'nin çıktısı aksiyondur — her toplantıdan en az 1 net aksiyon hedefleyin."));
+    if (blockerRatio > 60) insights.push(Analyze.insight("danger", `%${blockerRatio.toFixed(0)} toplantıda engel var`, "Tekrar eden engeller yapısaldır — yöneticiye eskale edin ve RCA uygulayın."));
+    const perfCount = records.filter(r => +r.yestTarget > 0 && +r.yestOutput >= 0).length;
+    if (perfCount > 0) {
+      const underTarget = records.filter(r => +r.yestTarget > 0 && +r.yestOutput < +r.yestTarget).length;
+      const hitRatio = ((perfCount - underTarget) / perfCount) * 100;
+      if (hitRatio < 70) insights.push(Analyze.insight("warn", `Hedef tutturma: %${hitRatio.toFixed(0)}`, "Kapasite/Takt/Heijunka planlarını gözden geçirin."));
+      else insights.push(Analyze.insight("success", `Hedef tutturma: %${hitRatio.toFixed(0)}`, "İstikrarlı performans — standartlaştırın."));
+    }
+    const shortDuration = records.filter(r => r.headcount && +r.headcount > 15).length;
+    if (shortDuration > 0) insights.push(Analyze.insight("info", `${shortDuration} toplantıda 15+ katılımcı`, "Asakai 15 dk/max 10 kişi önerilir. Büyük gruplarda bölün."));
+    return { insights, text };
+  },
+
+  renderAnalysis(root) {
+    const wrap = root.querySelector("#analyzeWrap");
+    if (!wrap) return;
+    const records = Storage.getAll(this.KEY);
+    if (!records.length) { wrap.innerHTML = Analyze.empty("🌅", "Asakai kaydedin, analiz otomatik çıkar."); return; }
+    const a = this.analyze(records);
+    wrap.innerHTML = Analyze.card("🔍", "Asakai Otomatik Analizi", "", a.insights.join(""));
   }
 };

@@ -52,6 +52,8 @@ const SQDCP = {
         </div>
       </div>
 
+      <div id="analyzeWrap"></div>
+
       <div class="card">
         <h3>📋 Kayıtlar (${list.length})</h3>
         <div id="listWrap"></div>
@@ -60,6 +62,7 @@ const SQDCP = {
     root.querySelector("#saveBtn").onclick = () => this.save(root);
     root.querySelector("#clearBtn").onclick = () => this.clearForm(root);
     this.renderList(root);
+    this.renderAnalysis(root);
   },
   renderList(root) {
     const wrap = root.querySelector("#listWrap");
@@ -129,5 +132,42 @@ const SQDCP = {
     else Storage.add(this.KEY, data);
     UI.toast("Kaydedildi", "success");
     this.render(root);
+  },
+
+  analyze(records) {
+    records = records || Storage.getAll(this.KEY);
+    if (!records.length) return { insights: [], text: ["Kayıt yok."] };
+    const insights = [], text = [];
+    const stat = {};
+    this.CATS.forEach(c => stat[c.k] = { green: 0, yellow: 0, red: 0 });
+    records.forEach(r => {
+      this.CATS.forEach(c => {
+        const s = (r.statuses || {})[c.k];
+        if (s && stat[c.k][s] !== undefined) stat[c.k][s]++;
+      });
+    });
+    const worst = this.CATS.map(c => ({ k: c.k, n: c.n, red: stat[c.k].red, yellow: stat[c.k].yellow }))
+      .sort((a, b) => (b.red * 2 + b.yellow) - (a.red * 2 + a.yellow))[0];
+    if (worst && (worst.red > 0 || worst.yellow > 0)) {
+      insights.push(Analyze.insight("action", `En zayıf eksen: ${worst.n}`, `${worst.red} kırmızı, ${worst.yellow} sarı. Önce bu alana aksiyon odaklanın.`));
+      text.push(`En zayıf: ${worst.n} (R:${worst.red}, Y:${worst.yellow})`);
+    }
+    const latest = records[records.length - 1];
+    const redToday = this.CATS.filter(c => ((latest.statuses || {})[c.k]) === "red").map(c => c.n);
+    if (redToday.length) insights.push(Analyze.insight("danger", `Son kayıtta ${redToday.length} kırmızı alan`, redToday.join(", ") + ". Asakai toplantısında önceliklendirin."));
+    else insights.push(Analyze.insight("success", "Son kayıtta kırmızı yok", "Stabil performans — standartlaştırın."));
+    const safetyRed = stat.s.red;
+    if (safetyRed > 0) insights.push(Analyze.insight("danger", `Güvenlikte ${safetyRed} kırmızı gün`, "Güvenlik pazarlıksızdır — Jidoka/Poka-Yoke aksiyonları acil."));
+    insights.push(Analyze.insight("info", `${records.length} SQDCP günü`, "Günlük düzenli takip, Asakai disiplini ile etkili olur."));
+    return { insights, text };
+  },
+
+  renderAnalysis(root) {
+    const wrap = root.querySelector("#analyzeWrap");
+    if (!wrap) return;
+    const records = Storage.getAll(this.KEY);
+    if (!records.length) { wrap.innerHTML = Analyze.empty("🪪", "SQDCP kaydedin, analiz otomatik çıkar."); return; }
+    const a = this.analyze(records);
+    wrap.innerHTML = Analyze.card("🔍", "SQDCP Otomatik Analizi", "", a.insights.join(""));
   }
 };

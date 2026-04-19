@@ -21,12 +21,14 @@ const Muda = {
       </div>
 
       <div id="tabBody"></div>
+      <div id="analyzeWrap"></div>
     `;
     root.querySelectorAll(".tab").forEach(t => t.onclick = () => {
       this.state.tab = t.dataset.tab;
       this.render(root);
     });
     this.renderTab(root);
+    this.renderAnalysis(root);
   },
   renderTab(root) {
     const body = root.querySelector("#tabBody");
@@ -120,5 +122,48 @@ const Muda = {
     else Storage.add(this.KEY, d);
     UI.toast("Kaydedildi", "success");
     this.render(root);
+  },
+
+  analyze(records) {
+    records = records || Storage.getAll(this.KEY);
+    if (!records.length) return { insights: [], text: ["Kayıt yok."] };
+    const insights = [], text = [];
+    const mc = records.filter(x => x.type === "muda").length;
+    const rc = records.filter(x => x.type === "mura").length;
+    const ic = records.filter(x => x.type === "muri").length;
+    const total = records.length;
+    insights.push(Analyze.insight("info", `${total} kayıt`, `Muda: ${mc}, Mura: ${rc}, Muri: ${ic}`));
+    text.push(`muda=${mc}, mura=${rc}, muri=${ic}`);
+    const mudaList = records.filter(x => x.type === "muda" && x.subtype);
+    if (mudaList.length) {
+      const typeCount = {};
+      mudaList.forEach(m => { typeCount[m.subtype] = (typeCount[m.subtype] || 0) + 1; });
+      const sorted = Object.entries(typeCount).sort((a, b) => b[1] - a[1]);
+      const top = sorted[0];
+      insights.push(Analyze.insight("action", `Baskın Muda türü: ${top[0]}`, `${top[1]} kayıt (toplamın %${((top[1]/mudaList.length)*100).toFixed(0)}'ü). Bu israf türüne öncelikli VSM/Kaizen uygulayın.`));
+      text.push(`Baskın Muda: ${top[0]} (${top[1]})`);
+      const covered = Object.keys(typeCount).length;
+      if (covered < this.MUDA_TYPES.length) {
+        const missing = this.MUDA_TYPES.filter(t => !typeCount[t]);
+        insights.push(Analyze.insight("warn", `${missing.length} Muda türü tanımlanmadı`, `Eksik: ${missing.slice(0,3).join(", ")}${missing.length>3?"...":""}. Tüm 8 israfı (TIMWOODS) kapsayan gözlem yapın.`));
+      }
+    } else if (mc > 0) {
+      insights.push(Analyze.insight("warn", "Muda kayıtları türü belirsiz", "Her Muda için 8 tipten birini seçerek kategorize edin."));
+    }
+    if (ic > mc) insights.push(Analyze.insight("warn", "Muri (aşırı yük) Muda'dan fazla", "İnsan/makine aşırı yüklenmesi hızla israfa dönüşür — önce Muri'yi azaltın."));
+    if (rc > 0 && rc === total) insights.push(Analyze.insight("info", "Sadece Mura kayıtları var", "Dengesizlik tespiti iyi. Heijunka ile seviyelendirin."));
+    const withSolution = records.filter(r => r.solution && r.solution.length > 3).length;
+    if (withSolution < total) insights.push(Analyze.insight("warn", `${total - withSolution} kayıt çözümsüz`, "Her israf için somut karşı önlem tanımlayın, yoksa tespit kalıcı değer üretmez."));
+    else if (total > 0) insights.push(Analyze.insight("success", "Tüm kayıtlar için çözüm tanımlı", "Uygulama ve izleme planına geçin."));
+    return { insights, text };
+  },
+
+  renderAnalysis(root) {
+    const wrap = root.querySelector("#analyzeWrap");
+    if (!wrap) return;
+    const records = Storage.getAll(this.KEY);
+    if (!records.length) { wrap.innerHTML = Analyze.empty("🗑️", "İsraf kaydedin, analiz otomatik çıkar."); return; }
+    const a = this.analyze(records);
+    wrap.innerHTML = Analyze.card("🔍", "Muda/Mura/Muri Otomatik Analizi", "", a.insights.join(""));
   }
 };

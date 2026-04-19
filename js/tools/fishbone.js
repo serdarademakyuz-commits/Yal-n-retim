@@ -44,6 +44,8 @@ const Fishbone = {
         </div>
       </div>
 
+      <div id="analyzeWrap"></div>
+
       <div class="card">
         <h3>📋 Kayıtlar (${list.length})</h3>
         <div id="listWrap"></div>
@@ -53,6 +55,7 @@ const Fishbone = {
     this.renderCategories(root);
     this.renderDiagram(root);
     this.renderList(root);
+    this.renderAnalysis(root);
 
     root.querySelector("#saveBtn").onclick = () => this.save(root);
     root.querySelector("#clearBtn").onclick = () => { this.clearForm(root); };
@@ -80,6 +83,7 @@ const Fishbone = {
         inp.value = "";
         this.renderCategories(root);
         this.renderDiagram(root);
+        this.renderAnalysis(root);
       };
       const cw = catEl.querySelector(".causes");
       cw.innerHTML = this.state.current.causes[k].map((c, i) => `
@@ -93,6 +97,7 @@ const Fishbone = {
         this.state.current.causes[k].splice(i, 1);
         this.renderCategories(root);
         this.renderDiagram(root);
+        this.renderAnalysis(root);
       });
     });
   },
@@ -148,6 +153,7 @@ const Fishbone = {
       root.querySelector("#area").value = it.area || "";
       this.renderCategories(root);
       this.renderDiagram(root);
+      this.renderAnalysis(root);
       root.querySelector("#saveBtn").textContent = "💾 Güncelle";
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
@@ -160,6 +166,7 @@ const Fishbone = {
     root.querySelector("#area").value = "";
     this.renderCategories(root);
     this.renderDiagram(root);
+    this.renderAnalysis(root);
     root.querySelector("#saveBtn").textContent = "💾 Kaydet";
     UI.toast("Temizlendi");
   },
@@ -176,5 +183,50 @@ const Fishbone = {
     else Storage.add(this.KEY, data);
     UI.toast("Kaydedildi", "success");
     this.render(root);
+  },
+
+  analyze(records) {
+    records = records || Storage.getAll(this.KEY);
+    const insights = [], text = [];
+    // Prefer current state when editing
+    let causes = null;
+    if (this.state && this.state.current && this.state.current.causes) {
+      const anyLive = Object.values(this.state.current.causes).some(arr => (arr || []).length > 0);
+      if (anyLive) causes = this.state.current.causes;
+    }
+    if (!causes && records.length) {
+      const latest = records[records.length - 1];
+      causes = latest.causes || {};
+    }
+    if (!causes) return { insights: [], text: ["Kayıt yok."] };
+    const rows = this.CATS.map(c => ({ k: c.k, n: c.n, count: (causes[c.k] || []).length }));
+    const total = rows.reduce((s, x) => s + x.count, 0);
+    if (total === 0) return { insights: [Analyze.insight("info", "Henüz neden eklenmedi", "Her 6M kategorisine neden ekleyin.")], text: ["Neden yok."] };
+    rows.sort((a, b) => b.count - a.count);
+    const dominant = rows[0];
+    insights.push(Analyze.insight("action", `Baskın kategori: ${dominant.n}`, `${dominant.count} neden (toplamın %${((dominant.count / total) * 100).toFixed(0)}'i). Bu kategoriye derin analiz uygulayın.`));
+    text.push(`Baskın: ${dominant.n} (${dominant.count})`);
+    const empties = rows.filter(r => r.count === 0);
+    if (empties.length) {
+      insights.push(Analyze.insight("warn", `${empties.length} kategori boş`, empties.map(e => e.n).join(", ") + ". Tüm 6M'yi kapsayan beyin fırtınası yapın."));
+      text.push(`Boş kategoriler: ${empties.length}`);
+    }
+    const weakest = rows.filter(r => r.count > 0).slice(-1)[0];
+    if (weakest && weakest !== dominant) {
+      insights.push(Analyze.insight("info", `En az neden: ${weakest.n} (${weakest.count})`, "Bu kategoride daha derin sorgulama yapın; eksik kalmış olabilir."));
+    }
+    insights.push(Analyze.insight("info", `Toplam ${total} neden, ${rows.filter(r => r.count > 0).length}/${rows.length} kategoride dolu`, "Kapsama ne kadar yüksek olursa o kadar güvenilir analiz."));
+    return { insights, text };
+  },
+
+  renderAnalysis(root) {
+    const wrap = root.querySelector("#analyzeWrap");
+    if (!wrap) return;
+    const records = Storage.getAll(this.KEY);
+    const hasLive = this.state && this.state.current && this.state.current.causes &&
+      Object.values(this.state.current.causes).some(arr => (arr || []).length > 0);
+    if (!records.length && !hasLive) { wrap.innerHTML = Analyze.empty("🐟", "Neden ekleyin, analiz otomatik oluşur."); return; }
+    const a = this.analyze(records);
+    wrap.innerHTML = Analyze.card("🔍", "Fishbone Otomatik Analizi", "", a.insights.join(""));
   }
 };

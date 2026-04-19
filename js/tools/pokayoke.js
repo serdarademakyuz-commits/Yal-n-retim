@@ -38,6 +38,8 @@ const PokaYoke = {
         </div>
       </div>
 
+      <div id="analyzeWrap"></div>
+
       <div class="card">
         <h3>📋 Kayıtlar (${list.length})</h3>
         <div id="listWrap"></div>
@@ -46,6 +48,7 @@ const PokaYoke = {
     root.querySelector("#saveBtn").onclick = () => this.save(root);
     root.querySelector("#clearBtn").onclick = () => this.clearForm(root);
     this.renderList(root);
+    this.renderAnalysis(root);
   },
   renderList(root) {
     const wrap = root.querySelector("#listWrap");
@@ -98,5 +101,36 @@ const PokaYoke = {
     else Storage.add(this.KEY, d);
     UI.toast("Kaydedildi", "success");
     this.render(root);
+  },
+
+  analyze(records) {
+    records = records || Storage.getAll(this.KEY);
+    if (!records.length) return { insights: [], text: ["Kayıt yok."] };
+    const insights = [], text = [];
+    const byLevel = { warn: 0, control: 0, shutdown: 0 };
+    records.forEach(r => { if (byLevel[r.level] !== undefined) byLevel[r.level]++; });
+    insights.push(Analyze.insight("info", `${records.length} Poka-Yoke`, `Uyarı: ${byLevel.warn}, Kontrol: ${byLevel.control}, Durdurma: ${byLevel.shutdown}`));
+    text.push(`warn=${byLevel.warn}, control=${byLevel.control}, shutdown=${byLevel.shutdown}`);
+    const strong = byLevel.control + byLevel.shutdown;
+    const ratio = (strong / records.length) * 100;
+    if (ratio < 50) insights.push(Analyze.insight("warn", `Sadece %${ratio.toFixed(0)} güçlü seviye (Kontrol+Durdurma)`, "Uyarı seviyesi insan hatasına açıktır — mümkünse Kontrol/Durdurma seviyesine yükseltin."));
+    else insights.push(Analyze.insight("success", `%${ratio.toFixed(0)} güçlü seviye (Kontrol+Durdurma)`, "Hata önleme disiplini iyi. Yeni süreçlere yayın."));
+    const totalSavings = records.reduce((s, r) => s + (+r.savings || 0), 0);
+    const totalCost = records.reduce((s, r) => s + (+r.cost || 0), 0);
+    if (totalSavings > 0) insights.push(Analyze.insight("success", `Toplam tasarruf: ${totalSavings.toLocaleString("tr-TR")}₺/ay`, totalCost > 0 ? `Yatırım geri dönüş: ~${(totalCost/totalSavings).toFixed(1)} ay.` : "ROI yüksek — yatırım maliyeti düşük."));
+    const typeCount = {};
+    records.forEach(r => { if (r.type) typeCount[r.type] = (typeCount[r.type] || 0) + 1; });
+    const topType = Object.entries(typeCount).sort((a, b) => b[1] - a[1])[0];
+    if (topType) insights.push(Analyze.insight("info", `Baskın tür: ${topType[0]} (${topType[1]})`, "Çözüm çeşitliliği için diğer türleri de değerlendirin."));
+    return { insights, text };
+  },
+
+  renderAnalysis(root) {
+    const wrap = root.querySelector("#analyzeWrap");
+    if (!wrap) return;
+    const records = Storage.getAll(this.KEY);
+    if (!records.length) { wrap.innerHTML = Analyze.empty("🛡️", "Poka-Yoke kaydedin, analiz otomatik çıkar."); return; }
+    const a = this.analyze(records);
+    wrap.innerHTML = Analyze.card("🔍", "Poka-Yoke Otomatik Analizi", "", a.insights.join(""));
   }
 };

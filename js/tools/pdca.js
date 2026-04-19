@@ -40,6 +40,8 @@ const PDCA = {
         <button class="btn btn-outline" id="clearBtn">🗑️ Temizle</button>
       </div>
 
+      <div id="analyzeWrap"></div>
+
       <div class="card" style="margin-top:12px">
         <h3>📋 Kayıtlar (${list.length})</h3>
         <div id="listWrap"></div>
@@ -48,6 +50,7 @@ const PDCA = {
     root.querySelector("#saveBtn").onclick = () => this.save(root);
     root.querySelector("#clearBtn").onclick = () => this.clearForm(root);
     this.renderList(root);
+    this.renderAnalysis(root);
   },
   renderList(root) {
     const wrap = root.querySelector("#listWrap");
@@ -100,5 +103,33 @@ const PDCA = {
     else Storage.add(this.KEY, d);
     UI.toast("Kaydedildi", "success");
     this.render(root);
+  },
+
+  analyze(records) {
+    records = records || Storage.getAll(this.KEY);
+    if (!records.length) return { insights: [], text: ["Döngü yok."] };
+    const insights = [], text = [];
+    const byStatus = { plan: 0, do: 0, check: 0, act: 0, done: 0 };
+    records.forEach(r => { byStatus[r.status || "plan"]++; });
+    const inProgress = records.length - byStatus.done;
+    const stuck = byStatus.plan;
+    insights.push(Analyze.insight("info", `${records.length} döngü`, `Tamamlanan: ${byStatus.done}, Aktif: ${inProgress} (P:${byStatus.plan}, D:${byStatus.do}, C:${byStatus.check}, A:${byStatus.act})`));
+    text.push(`Durum: done=${byStatus.done}, plan=${byStatus.plan}, do=${byStatus.do}, check=${byStatus.check}, act=${byStatus.act}`);
+    if (stuck > 0) insights.push(Analyze.insight("warn", `${stuck} döngü Planlama'da takılı`, "Plan-aşırı yapmak yerine küçük deneme adımlarına geçin (DO)."));
+    if (byStatus.check > byStatus.act) insights.push(Analyze.insight("warn", "Kontrol yapılmış ama Aksiyon az", "Ölçüm sonuçlarını standartlaştırma veya yeni döngü olarak kapatın."));
+    const latest = records[records.length - 1];
+    const filled = ["plan", "do", "check", "act"].filter(k => latest[k] && latest[k].length > 3).length;
+    if (filled === 4) insights.push(Analyze.insight("success", "Son döngü eksiksiz (PDCA)", "Standartlaştırma aşamasına geçebilirsiniz."));
+    else insights.push(Analyze.insight("warn", `Son döngü ${filled}/4 dolu`, "Tüm 4 aşama doldurulmadan kapatma yapmayın."));
+    return { insights, text };
+  },
+
+  renderAnalysis(root) {
+    const wrap = root.querySelector("#analyzeWrap");
+    if (!wrap) return;
+    const records = Storage.getAll(this.KEY);
+    if (!records.length) { wrap.innerHTML = Analyze.empty("🔄", "Döngü kaydedin, analiz otomatik çıkar."); return; }
+    const a = this.analyze(records);
+    wrap.innerHTML = Analyze.card("🔍", "PDCA Otomatik Analizi", "", a.insights.join(""));
   }
 };

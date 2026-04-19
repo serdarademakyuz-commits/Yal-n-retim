@@ -57,6 +57,8 @@ const Gemba = {
         </div>
       </div>
 
+      <div id="analyzeWrap"></div>
+
       <div class="card">
         <h3>📋 Yürüyüşler (${list.length})</h3>
         <div id="listWrap"></div>
@@ -75,6 +77,7 @@ const Gemba = {
     root.querySelector("#clearBtn").onclick = () => this.clearForm(root);
     this.renderObs(root);
     this.renderList(root);
+    this.renderAnalysis(root);
   },
   renderObs(root) {
     const wrap = root.querySelector("#obsWrap");
@@ -155,5 +158,45 @@ const Gemba = {
     else Storage.add(this.KEY, data);
     UI.toast("Kaydedildi", "success");
     this.render(root);
+  },
+
+  analyze(records) {
+    records = records || Storage.getAll(this.KEY);
+    if (!records.length) return { insights: [], text: ["Kayıt yok."] };
+    const insights = [], text = [];
+    let good = 0, issue = 0, improve = 0, highPri = 0;
+    records.forEach(r => {
+      (r.observations || []).forEach(o => {
+        if (o.type === "good") good++;
+        else if (o.type === "issue") issue++;
+        else if (o.type === "improve") improve++;
+        if (o.priority === "high") highPri++;
+      });
+    });
+    const total = good + issue + improve;
+    insights.push(Analyze.insight("info", `${records.length} yürüyüş, ${total} gözlem`, `İyi: ${good}, Problem: ${issue}, Fırsat: ${improve}`));
+    text.push(`walks=${records.length}, obs=${total} (good=${good}, issue=${issue}, improve=${improve})`);
+    if (total > 0) {
+      const issueRatio = ((issue + improve) / total) * 100;
+      if (issueRatio > 70) insights.push(Analyze.insight("warn", `%${issueRatio.toFixed(0)} problem/fırsat ağırlıklı`, "İyi uygulamaları da not alın, motivasyon ve standartlaşma için kritik."));
+      else if (good > issue + improve) insights.push(Analyze.insight("info", "İyi uygulama ağırlıklı", "Gözlem derinliğini artırın; problem ve fırsatlar gözden kaçabilir."));
+    }
+    if (highPri > 0) insights.push(Analyze.insight("action", `${highPri} yüksek öncelikli bulgu`, "Asakai'de paylaşıp 5 Neden/A3 başlatın."));
+    const focusCount = {};
+    records.forEach(r => { if (r.focus) focusCount[r.focus] = (focusCount[r.focus] || 0) + 1; });
+    const topFocus = Object.entries(focusCount).sort((a, b) => b[1] - a[1])[0];
+    if (topFocus) insights.push(Analyze.insight("info", `En çok odak: ${topFocus[0]} (${topFocus[1]})`, "Diğer SQDCP eksenlerine de Gemba yapın."));
+    const withoutSummary = records.filter(r => !r.summary || r.summary.length < 5).length;
+    if (withoutSummary > 0) insights.push(Analyze.insight("warn", `${withoutSummary} yürüyüşte özet yok`, "Her yürüyüş aksiyon ile kapanmalı."));
+    return { insights, text };
+  },
+
+  renderAnalysis(root) {
+    const wrap = root.querySelector("#analyzeWrap");
+    if (!wrap) return;
+    const records = Storage.getAll(this.KEY);
+    if (!records.length) { wrap.innerHTML = Analyze.empty("👣", "Yürüyüş kaydedin, analiz otomatik çıkar."); return; }
+    const a = this.analyze(records);
+    wrap.innerHTML = Analyze.card("🔍", "Gemba Otomatik Analizi", "", a.insights.join(""));
   }
 };

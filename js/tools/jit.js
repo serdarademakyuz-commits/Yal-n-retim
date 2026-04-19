@@ -138,5 +138,55 @@ const JIT = {
     else Storage.add(this.KEY, data);
     UI.toast("Kaydedildi", "success");
     this.render(root);
+  },
+
+  analyze(records) {
+    records = records || Storage.getAll(this.KEY);
+    if (!records.length) return { insights: [], text: ["Kayıt yok."] };
+    const insights = [], text = [];
+    const latest = records[records.length - 1];
+    const daily = +latest.daily || 0;
+    const rop = +latest.rop || 0;
+    const eoq = +latest.eoq || 0;
+    const safetyStock = +latest.safetyStock || 0;
+    const leadTime = +latest.leadTime || 0;
+    const coverage = daily > 0 ? rop / daily : 0;
+    const eoqRatio = daily > 0 ? eoq / daily : 0;
+    insights.push(Analyze.insight("info", `Stok kapsamı: ${coverage.toFixed(1)} gün`,
+      `ROP ${rop.toFixed(0)} adet ${daily} adet/gün tüketimle ${coverage.toFixed(1)} güne yeter.`));
+    text.push(`Kapsam: ${coverage.toFixed(1)} gün`);
+    if (coverage < leadTime && leadTime > 0) {
+      insights.push(Analyze.insight("danger", "Sipariş noktası temin süresini karşılamıyor", "ROP temin süresi boyunca yetmez; güvenlik stoğunu artırın."));
+    }
+    if (eoq > 0 && daily > 0) {
+      insights.push(Analyze.insight("info", `EOQ / Günlük talep: ${eoqRatio.toFixed(1)}x`,
+        `Bir siparişle ${eoqRatio.toFixed(1)} günlük tüketim karşılanır.`));
+      text.push(`EOQ/Gün: ${eoqRatio.toFixed(1)}`);
+      if (eoqRatio > 30) {
+        insights.push(Analyze.insight("warn", "EOQ çok büyük", "30 günden fazla stok; sipariş maliyeti yüksek veya tutma maliyeti düşük. JIT ile daha sık sipariş değerlendirin."));
+      } else if (eoqRatio < 1) {
+        insights.push(Analyze.insight("warn", "EOQ çok küçük", "Günlük talepten az; çok sık sipariş gerekir. Sipariş maliyeti yüksek olabilir."));
+      }
+    }
+    if (safetyStock === 0) {
+      insights.push(Analyze.insight("warn", "Güvenlik stoğu yok", "Tedarikçi belirsizliğinde stok sıkıntısı riski; güvenlik stoğunu 0'dan yüksek tutun."));
+    }
+    // Reorder urgency heuristic based on coverage vs lead time
+    if (leadTime > 0 && coverage > 0) {
+      const urgencyRatio = coverage / leadTime;
+      if (urgencyRatio < 1.2) insights.push(Analyze.insight("action", "Yeniden sipariş aciliyeti yüksek", "Mevcut kapsam temin süresine çok yakın; sipariş tetiklenmeli."));
+      else if (urgencyRatio < 1.5) insights.push(Analyze.insight("warn", "Sipariş dikkat seviyesinde", "Takip edin; güvenlik stoğu marjı dar."));
+      else insights.push(Analyze.insight("success", "Sipariş marjı rahat", "Kapsam temin süresinin üstünde; plan güvenli."));
+    }
+    return { insights, text };
+  },
+
+  renderAnalysis(root) {
+    const wrap = root.querySelector("#analyzeWrap");
+    if (!wrap) return;
+    const records = Storage.getAll(this.KEY);
+    if (!records.length) { wrap.innerHTML = Analyze.empty("⏳", "JIT kaydı ekleyin, analiz otomatik oluşur."); return; }
+    const a = this.analyze(records);
+    wrap.innerHTML = Analyze.card("🔍", "JIT Otomatik Analizi", "", a.insights.join(""));
   }
 };

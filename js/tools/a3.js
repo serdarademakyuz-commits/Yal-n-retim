@@ -40,6 +40,8 @@ const A3 = {
         <button class="btn btn-accent" id="exportBtn">📤 Metin Olarak İndir</button>
       </div>
 
+      <div id="analyzeWrap"></div>
+
       <div class="card" style="margin-top:12px">
         <h3>📋 Kayıtlı Raporlar (${list.length})</h3>
         <div id="listWrap"></div>
@@ -51,6 +53,7 @@ const A3 = {
     root.querySelector("#exportBtn").onclick = () => this.export(root);
 
     this.renderList(root);
+    this.renderAnalysis(root);
   },
 
   renderList(root) {
@@ -123,5 +126,36 @@ const A3 = {
     });
     UI.downloadText(`A3_${d.title || "rapor"}.txt`, t);
     UI.toast("Rapor indirildi", "success");
+  },
+
+  analyze(records) {
+    records = records || Storage.getAll(this.KEY);
+    if (!records.length) return { insights: [], text: ["Kayıt yok."] };
+    const insights = [], text = [];
+    const latest = records[records.length - 1];
+    const filled = this.FIELDS.filter(f => latest[f.k] && latest[f.k].length > 3);
+    const empty = this.FIELDS.filter(f => !latest[f.k] || latest[f.k].length <= 3);
+    const pct = (filled.length / this.FIELDS.length) * 100;
+    if (pct === 100) insights.push(Analyze.insight("success", "A3 eksiksiz", "8 bölüm tamamlanmış. Raporu paylaşıp standartlaştırın."));
+    else if (pct >= 75) insights.push(Analyze.insight("warn", `Tamlık %${pct.toFixed(0)} — ${empty.length} bölüm boş`, `Eksik: ${empty.map(f => f.n).join(", ")}`));
+    else insights.push(Analyze.insight("danger", `Tamlık %${pct.toFixed(0)} — zayıf`, "A3 disiplinli bir şekilde doldurulmalı. En kritik eksikler: Neden Analizi, Karşı Önlemler, Takip."));
+    text.push(`A3 tamlık: %${pct.toFixed(0)}`);
+    const critical = ["analysis", "countermeasures", "followup"];
+    const missingCritical = critical.filter(k => !latest[k] || latest[k].length <= 3);
+    if (missingCritical.length) {
+      insights.push(Analyze.insight("warn", `Kritik bölüm(ler) eksik: ${missingCritical.length}`, "Bu bölümler olmadan PDCA kapanmaz."));
+      text.push(`Kritik eksik: ${missingCritical.length}`);
+    }
+    insights.push(Analyze.insight("info", `Toplam ${records.length} A3 raporu`, "Tekrar eden problem ailelerini belirleyin."));
+    return { insights, text };
+  },
+
+  renderAnalysis(root) {
+    const wrap = root.querySelector("#analyzeWrap");
+    if (!wrap) return;
+    const records = Storage.getAll(this.KEY);
+    if (!records.length) { wrap.innerHTML = Analyze.empty("📋", "A3 kaydedin, analiz otomatik oluşur."); return; }
+    const a = this.analyze(records);
+    wrap.innerHTML = Analyze.card("🔍", "A3 Otomatik Analizi", "", a.insights.join(""));
   }
 };
