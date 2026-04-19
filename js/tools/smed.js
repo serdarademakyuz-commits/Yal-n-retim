@@ -38,6 +38,8 @@ const SMED = {
         <div id="analysis"></div>
       </div>
 
+      <div id="analyzeWrap"></div>
+
       <div class="btn-row">
         <button class="btn btn-success" id="saveBtn">💾 Kaydet</button>
         <button class="btn btn-outline" id="clearBtn">🗑️ Temizle</button>
@@ -57,15 +59,17 @@ const SMED = {
       root.querySelector("#actName").value = "";
       root.querySelector("#actDur").value = 0;
       this.renderActivities(root);
+      this.renderGainAnalysis(root);
       this.renderAnalysis(root);
     };
     root.querySelector("#saveBtn").onclick = () => this.save(root);
     root.querySelector("#clearBtn").onclick = () => this.clearForm(root);
-    root.querySelector("#before").oninput = () => this.renderAnalysis(root);
-    root.querySelector("#target").oninput = () => this.renderAnalysis(root);
+    root.querySelector("#before").oninput = () => { this.renderGainAnalysis(root); this.renderAnalysis(root); };
+    root.querySelector("#target").oninput = () => { this.renderGainAnalysis(root); this.renderAnalysis(root); };
     this.renderActivities(root);
-    this.renderAnalysis(root);
+    this.renderGainAnalysis(root);
     this.renderList(root);
+    this.renderAnalysis(root);
   },
   renderActivities(root) {
     const wrap = root.querySelector("#actsWrap");
@@ -87,15 +91,15 @@ const SMED = {
     `).join("");
     wrap.querySelectorAll("[data-del]").forEach(b => b.onclick = (e) => {
       this.state.activities.splice(+e.target.dataset.del, 1);
-      this.renderActivities(root); this.renderAnalysis(root);
+      this.renderActivities(root); this.renderGainAnalysis(root); this.renderAnalysis(root);
     });
     wrap.querySelectorAll("[data-toggle]").forEach(b => b.onclick = (e) => {
       const i = +e.target.dataset.toggle;
       this.state.activities[i].type = this.state.activities[i].type === "internal" ? "external" : "internal";
-      this.renderActivities(root); this.renderAnalysis(root);
+      this.renderActivities(root); this.renderGainAnalysis(root); this.renderAnalysis(root);
     });
   },
-  renderAnalysis(root) {
+  renderGainAnalysis(root) {
     const a = root.querySelector("#analysis");
     const internal = this.state.activities.filter(x => x.type === "internal").reduce((s, x) => s + x.dur, 0);
     const external = this.state.activities.filter(x => x.type === "external").reduce((s, x) => s + x.dur, 0);
@@ -149,7 +153,7 @@ const SMED = {
       root.querySelector("#process").value = it.process;
       root.querySelector("#before").value = it.before;
       root.querySelector("#target").value = it.target;
-      this.renderActivities(root); this.renderAnalysis(root);
+      this.renderActivities(root); this.renderGainAnalysis(root); this.renderAnalysis(root);
       root.querySelector("#saveBtn").textContent = "💾 Güncelle";
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
@@ -160,7 +164,7 @@ const SMED = {
     root.querySelector("#process").value = "";
     root.querySelector("#before").value = 45;
     root.querySelector("#target").value = 10;
-    this.renderActivities(root); this.renderAnalysis(root);
+    this.renderActivities(root); this.renderGainAnalysis(root); this.renderAnalysis(root);
     root.querySelector("#saveBtn").textContent = "💾 Kaydet";
     UI.toast("Temizlendi");
   },
@@ -175,5 +179,54 @@ const SMED = {
     else Storage.add(this.KEY, data);
     UI.toast("Kaydedildi", "success");
     this.render(root);
+  },
+
+  analyze(records) {
+    records = records || Storage.getAll(this.KEY);
+    if (!records.length) return { insights: [], text: ["Kayıt yok."] };
+    const insights = [], text = [];
+    const latest = records[records.length - 1];
+    const before = +latest.before || 0;
+    const after = +latest.after || 0;
+    const target = +latest.target || 0;
+    const saving = before - after;
+    const savPct = before > 0 ? (saving / before) * 100 : 0;
+    const acts = latest.activities || [];
+    const internal = acts.filter(x => x.type === "internal").reduce((s, x) => s + (+x.dur || 0), 0);
+    const external = acts.filter(x => x.type === "external").reduce((s, x) => s + (+x.dur || 0), 0);
+    const totalWork = internal + external;
+    const intPct = totalWork > 0 ? (internal / totalWork) * 100 : 0;
+    const extPct = totalWork > 0 ? (external / totalWork) * 100 : 0;
+    insights.push(Analyze.insight(savPct >= 50 ? "success" : savPct >= 20 ? "warn" : "danger",
+      `Dönüşüm kazancı: %${savPct.toFixed(1)}`,
+      `${before.toFixed(1)} dk → ${after.toFixed(1)} dk (${saving.toFixed(1)} dk tasarruf).`));
+    text.push(`Kazanç: %${savPct.toFixed(1)} (${saving.toFixed(1)} dk)`);
+    if (totalWork > 0) {
+      insights.push(Analyze.insight("info", `İç/Dış oranı: %${intPct.toFixed(0)} / %${extPct.toFixed(0)}`,
+        `İç: ${internal.toFixed(1)} dk (makine durur) • Dış: ${external.toFixed(1)} dk (paralel).`));
+      text.push(`İç/Dış: %${intPct.toFixed(0)}/${extPct.toFixed(0)}`);
+    }
+    if (intPct > 70 && totalWork > 0) {
+      insights.push(Analyze.insight("action", "İç faaliyet oranı yüksek", "İç faaliyetleri dışa dönüştürün (hazırlık, taşıma makine çalışırken). Paralelleştirme ile makine duruşunu azaltın."));
+      text.push("Öneri: İç faaliyetleri paralelleştir.");
+    }
+    if (target > 0) {
+      if (after <= target) insights.push(Analyze.insight("success", `Hedefe ulaşıldı (${target} dk)`, "SMED hedefi tutturuldu."));
+      else insights.push(Analyze.insight("warn", `Hedefin ${(after - target).toFixed(1)} dk üstünde`, `Hedef: ${target} dk, Mevcut: ${after.toFixed(1)} dk. Daha fazla dönüşüm gerekli.`));
+    }
+    if (records.length > 1) {
+      const avg = records.reduce((s, r) => s + ((+r.before || 0) - (+r.after || 0)) / Math.max(1, +r.before || 1), 0) / records.length * 100;
+      insights.push(Analyze.insight("info", `Ortalama kazanç: %${avg.toFixed(1)} (${records.length} kayıt)`, "Kayıtlar arası toplam dönüşüm performansı."));
+    }
+    return { insights, text };
+  },
+
+  renderAnalysis(root) {
+    const wrap = root.querySelector("#analyzeWrap");
+    if (!wrap) return;
+    const records = Storage.getAll(this.KEY);
+    if (!records.length) { wrap.innerHTML = Analyze.empty("⚡", "SMED analizi kaydedin, otomatik analiz oluşur."); return; }
+    const a = this.analyze(records);
+    wrap.innerHTML = Analyze.card("🔍", "SMED Otomatik Analizi", "", a.insights.join(""));
   }
 };

@@ -31,6 +31,8 @@ const Pareto = {
         <div id="analysisWrap" style="margin-top:10px"></div>
       </div>
 
+      <div id="analyzeWrap"></div>
+
       <div class="btn-row">
         <button class="btn btn-success" id="saveBtn">💾 Kaydet</button>
         <button class="btn btn-outline" id="clearBtn">🗑️ Temizle</button>
@@ -51,6 +53,7 @@ const Pareto = {
       root.querySelector("#newVal").value = "";
       this.renderItems(root);
       this.renderChart(root);
+      this.renderAnalysis(root);
     };
 
     root.querySelector("#saveBtn").onclick = () => this.save(root);
@@ -58,6 +61,7 @@ const Pareto = {
 
     this.renderItems(root);
     this.renderChart(root);
+    this.renderAnalysis(root);
     this.renderList(root);
   },
 
@@ -77,6 +81,7 @@ const Pareto = {
       this.state.items.splice(parseInt(e.target.dataset.i), 1);
       this.renderItems(root);
       this.renderChart(root);
+      this.renderAnalysis(root);
     });
   },
 
@@ -173,7 +178,7 @@ const Pareto = {
       this.state.items = [...(it.items || [])];
       root.querySelector("#title").value = it.title;
       root.querySelector("#period").value = it.period || "";
-      this.renderItems(root); this.renderChart(root);
+      this.renderItems(root); this.renderChart(root); this.renderAnalysis(root);
       root.querySelector("#saveBtn").textContent = "💾 Güncelle";
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
@@ -202,5 +207,48 @@ const Pareto = {
     else Storage.add(this.KEY, data);
     UI.toast("Kaydedildi", "success");
     this.render(root);
+  },
+
+  analyze(items) {
+    items = items || [];
+    if (!items.length) return { summary: "", insights: [], text: ["Veri yok."] };
+    const sorted = [...items].sort((a, b) => b.val - a.val);
+    const total = sorted.reduce((s, x) => s + (+x.val || 0), 0);
+    if (total <= 0) return { summary: "Tüm değerler sıfır.", insights: [], text: ["Sıfırdan büyük değer girin."] };
+    let cum = 0, vital = [];
+    const rows = sorted.map(x => {
+      cum += +x.val || 0;
+      const cumPct = (cum / total) * 100;
+      const isVital = cumPct <= 80 || vital.length === 0;
+      if (isVital) vital.push(x);
+      return { ...x, pct: ((+x.val || 0) / total) * 100, cumPct, isVital };
+    });
+    const vitalPct = vital.reduce((s, x) => s + (+x.val || 0), 0) / total * 100;
+    const top = rows[0];
+    const insights = [];
+    const text = [];
+    insights.push(Analyze.insight("danger", `En kritik neden: ${top.cat}`, `Tek başına %${top.pct.toFixed(1)} paya sahip (${top.val} adet). Önce bu sorunu çözün.`));
+    text.push(`En kritik: ${top.cat} — %${top.pct.toFixed(1)} (${top.val})`);
+    insights.push(Analyze.insight("action", `Hayati Az: ${vital.length} kategori, toplam %${vitalPct.toFixed(1)} etki`, `Odak: ${vital.map(v => v.cat).join(", ")}. 80/20 prensibi bu kategorilere kaizen uygulamayı öneriyor.`));
+    text.push(`Hayati az: ${vital.map(v => v.cat).join(", ")} (%${vitalPct.toFixed(1)})`);
+    const trivial = rows.length - vital.length;
+    if (trivial > 0) {
+      insights.push(Analyze.insight("info", `Önemsiz Çok: ${trivial} kategori`, `Bu kategoriler toplam etkinin sadece %${(100 - vitalPct).toFixed(1)}'ini oluşturuyor. Kaynak ayırmadan önce hayati az çözüldüğünden emin olun.`));
+      text.push(`Önemsiz çok: ${trivial} kategori (%${(100 - vitalPct).toFixed(1)})`);
+    }
+    if (vitalPct >= 80) {
+      insights.push(Analyze.insight("success", "Pareto 80/20 dağılımı belirgin", "Sınırlı sayıda nedene odaklanmak yüksek kazanç getirir."));
+    } else if (vitalPct < 60) {
+      insights.push(Analyze.insight("warn", "Dağılım homojen", "Pareto etkisi zayıf; kök nedenler geniş yayılmış. Fishbone veya 5 Neden ile derinleşin."));
+    }
+    return { summary: `${rows.length} kategori, toplam ${total}`, insights, text, vital, vitalPct, rows };
+  },
+
+  renderAnalysis(root) {
+    const wrap = root.querySelector("#analyzeWrap");
+    if (!wrap) return;
+    if (!this.state.items.length) { wrap.innerHTML = Analyze.empty("📊", "Veri girin, analiz otomatik oluşur."); return; }
+    const a = this.analyze(this.state.items);
+    wrap.innerHTML = Analyze.card("🔍", "Otomatik Pareto Analizi", `<small style="color:var(--muted)">${a.summary}</small>`, a.insights.join(""), "");
   }
 };

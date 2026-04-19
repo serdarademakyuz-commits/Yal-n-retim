@@ -35,15 +35,18 @@ const OEE = {
         <div id="result"><div class="empty"><div class="empty-icon">📊</div><div>Hesaplamak için "Hesapla"ya basın.</div></div></div>
       </div>
 
+      <div id="analyzeWrap"></div>
+
       <div class="card">
         <h3>📋 Kayıtlar (${list.length})</h3>
         <div id="listWrap"></div>
       </div>
     `;
-    root.querySelector("#calcBtn").onclick = () => this.calc(root);
+    root.querySelector("#calcBtn").onclick = () => { this.calc(root); this.renderAnalysis(root); };
     root.querySelector("#saveBtn").onclick = () => this.save(root);
     root.querySelector("#clearBtn").onclick = () => this.clearForm(root);
     this.renderList(root);
+    this.renderAnalysis(root);
   },
   calc(root) {
     const planned = +root.querySelector("#planned").value;
@@ -145,5 +148,49 @@ const OEE = {
     else Storage.add(this.KEY, data);
     UI.toast("Kaydedildi", "success");
     this.render(root);
+  },
+
+  analyze(records) {
+    records = records || Storage.getAll(this.KEY);
+    if (!records.length) return { insights: [], text: ["OEE kaydı yok."] };
+    const insights = [], text = [];
+    const latest = records[records.length - 1];
+    const oeePct = latest.oee * 100;
+    const a = latest.availability * 100, p = latest.performance * 100, q = latest.quality * 100;
+    const factors = [
+      { name: "Kullanılabilirlik", val: a, cause: "duruşlar (planlı/plansız)" },
+      { name: "Performans", val: p, cause: "düşük hız, mikro-duruşlar" },
+      { name: "Kalite", val: q, cause: "hurda, yeniden işleme" }
+    ].sort((x, y) => x.val - y.val);
+    const weakest = factors[0];
+    if (oeePct >= 85) insights.push(Analyze.insight("success", `OEE ${oeePct.toFixed(1)}% — Dünya Klası`, "Tebrikler, 85% üstü dünya standartlarındadır."));
+    else if (oeePct >= 60) insights.push(Analyze.insight("warn", `OEE ${oeePct.toFixed(1)}% — Tipik Seviye`, "Hedef 85%. Büyük iyileşme potansiyeli var."));
+    else insights.push(Analyze.insight("danger", `OEE ${oeePct.toFixed(1)}% — Kritik`, "60% altı ciddi kayıpları işaret eder. Acil aksiyon gerekli."));
+    text.push(`OEE: %${oeePct.toFixed(1)}`);
+    insights.push(Analyze.insight("action", `En zayıf faktör: ${weakest.name} (%${weakest.val.toFixed(1)})`, `Bu faktör ${weakest.cause} kaynaklı. Önce buraya kaizen/TPM uygulayın.`));
+    text.push(`En zayıf: ${weakest.name} %${weakest.val.toFixed(1)}`);
+    const target = latest.target || 85;
+    const gap = target - oeePct;
+    if (gap > 0) {
+      insights.push(Analyze.insight("warn", `Hedef OEE %${target}'den %${gap.toFixed(1)} puan uzakta`, "En zayıf faktörü 1 puan iyileştirmek OEE'yi yaklaşık 1/3 puan artırır."));
+      text.push(`Hedef fark: ${gap.toFixed(1)} puan`);
+    }
+    if (records.length > 1) {
+      const prev = records[records.length - 2];
+      const delta = (latest.oee - prev.oee) * 100;
+      if (Math.abs(delta) > 0.5) {
+        insights.push(Analyze.insight(delta > 0 ? "success" : "danger", `Önceki kayda göre ${delta > 0 ? "+" : ""}${delta.toFixed(1)} puan`, `${delta > 0 ? "İyileşme" : "Gerileme"} gözlendi.`));
+      }
+    }
+    return { insights, text };
+  },
+
+  renderAnalysis(root) {
+    const wrap = root.querySelector("#analyzeWrap");
+    if (!wrap) return;
+    const records = Storage.getAll(this.KEY);
+    if (!records.length) { wrap.innerHTML = Analyze.empty("📊", "OEE hesabı kaydedin, analiz otomatik oluşur."); return; }
+    const a = this.analyze(records);
+    wrap.innerHTML = Analyze.card("🔍", "OEE Otomatik Analizi", "", a.insights.join(""));
   }
 };

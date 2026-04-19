@@ -39,6 +39,8 @@ const Takt = {
         </div>
       </div>
 
+      <div id="analyzeWrap"></div>
+
       <div class="card">
         <h3>📋 Kayıtlar (${list.length})</h3>
         <div id="listWrap"></div>
@@ -48,6 +50,7 @@ const Takt = {
     root.querySelector("#saveBtn").onclick = () => this.save(root);
     root.querySelector("#clearBtn").onclick = () => this.clearForm(root);
     this.renderList(root);
+    this.renderAnalysis(root);
   },
   calc(root) {
     const shifts = +root.querySelector("#shifts").value;
@@ -152,5 +155,48 @@ const Takt = {
     else Storage.add(this.KEY, data);
     UI.toast("Kaydedildi", "success");
     this.render(root);
+  },
+
+  analyze(records) {
+    records = records || Storage.getAll(this.KEY);
+    if (!records.length) return { insights: [], text: ["Kayıt yok."] };
+    const insights = [], text = [];
+    const takts = records.map(r => +r.taktSec || 0).filter(v => v > 0);
+    if (!takts.length) return { insights: [Analyze.insight("info", "Takt verisi yok", "Hesaplama yapıp kaydedin.")], text: ["Takt verisi yok."] };
+    const mean = takts.reduce((s, x) => s + x, 0) / takts.length;
+    const min = Math.min(...takts);
+    const max = Math.max(...takts);
+    const latest = records[records.length - 1];
+    insights.push(Analyze.insight("info", `Ortalama Takt: ${mean.toFixed(1)} sn`, `${records.length} kayıt • Min: ${min.toFixed(1)} sn • Max: ${max.toFixed(1)} sn`));
+    text.push(`Ortalama takt: ${mean.toFixed(1)} sn (n=${records.length})`);
+    if (latest && latest.taktSec) {
+      const diff = latest.taktSec - mean;
+      if (Math.abs(diff) > mean * 0.1) {
+        insights.push(Analyze.insight(diff < 0 ? "success" : "warn", `Son kayıt ortalamadan ${diff > 0 ? "+" : ""}${diff.toFixed(1)} sn`, diff < 0 ? "Daha hızlı ritim; talep artışında hazırsınız." : "Daha yavaş ritim; müşteri talebini karşılamada risk."));
+      }
+    }
+    if (records.length === 1) {
+      insights.push(Analyze.insight("warn", "Darboğaz tespiti için tek kayıt yetersiz", "Birden fazla hat/ürün için kayıt ekleyin; en yavaş Takt darboğazı gösterir."));
+      text.push("Tek kayıt - darboğaz analizi yok.");
+    } else {
+      const slowestIdx = takts.indexOf(max);
+      const slowest = records[slowestIdx];
+      insights.push(Analyze.insight("action", `Darboğaz: ${UI.escape(slowest.name || "?")}`, `Takt ${max.toFixed(1)} sn ile en yavaş. Bu hat/ürün akışı belirler; SMED / TPM odağı.`));
+      text.push(`Darboğaz: ${slowest.name} (${max.toFixed(1)} sn)`);
+    }
+    const spread = max - min;
+    if (spread > mean * 0.3 && records.length > 1) {
+      insights.push(Analyze.insight("warn", `Takt yayılımı yüksek (${spread.toFixed(1)} sn)`, "Hatlar/ürünler arası dengesizlik var. Heijunka ile seviyelendirmeyi değerlendirin."));
+    }
+    return { insights, text };
+  },
+
+  renderAnalysis(root) {
+    const wrap = root.querySelector("#analyzeWrap");
+    if (!wrap) return;
+    const records = Storage.getAll(this.KEY);
+    if (!records.length) { wrap.innerHTML = Analyze.empty("⏱️", "Takt hesaplayıp kaydedin, analiz otomatik oluşur."); return; }
+    const a = this.analyze(records);
+    wrap.innerHTML = Analyze.card("🔍", "Takt Otomatik Analizi", "", a.insights.join(""));
   }
 };

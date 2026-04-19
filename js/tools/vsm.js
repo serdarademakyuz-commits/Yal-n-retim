@@ -50,6 +50,8 @@ const VSM = {
         <div id="metrics"></div>
       </div>
 
+      <div id="analyzeWrap"></div>
+
       <div class="btn-row">
         <button class="btn btn-success" id="saveBtn">💾 Kaydet</button>
         <button class="btn btn-outline" id="clearBtn">🗑️ Temizle</button>
@@ -76,12 +78,14 @@ const VSM = {
       root.querySelector("#lt").value = 0;
       this.renderChain(root);
       this.renderMetrics(root);
+      this.renderAnalysis(root);
     };
     root.querySelector("#saveBtn").onclick = () => this.save(root);
     root.querySelector("#clearBtn").onclick = () => this.clearForm(root);
     this.renderChain(root);
     this.renderMetrics(root);
     this.renderList(root);
+    this.renderAnalysis(root);
   },
   renderChain(root) {
     const w = root.querySelector("#chain");
@@ -103,7 +107,7 @@ const VSM = {
     `;
     w.querySelectorAll("button[data-i]").forEach(b => b.onclick = (e) => {
       this.state.nodes.splice(+e.target.dataset.i, 1);
-      this.renderChain(root); this.renderMetrics(root);
+      this.renderChain(root); this.renderMetrics(root); this.renderAnalysis(root);
     });
   },
   renderMetrics(root) {
@@ -162,7 +166,7 @@ const VSM = {
       root.querySelector("#title").value = it.title || "";
       root.querySelector("#demand").value = it.demand || 1000;
       root.querySelector("#avail").value = it.avail || 28800;
-      this.renderChain(root); this.renderMetrics(root);
+      this.renderChain(root); this.renderMetrics(root); this.renderAnalysis(root);
       root.querySelector("#saveBtn").textContent = "💾 Güncelle";
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
@@ -171,7 +175,7 @@ const VSM = {
     this.state.editingId = null;
     this.state.nodes = [];
     root.querySelector("#title").value = "";
-    this.renderChain(root); this.renderMetrics(root);
+    this.renderChain(root); this.renderMetrics(root); this.renderAnalysis(root);
     root.querySelector("#saveBtn").textContent = "💾 Kaydet";
     UI.toast("Temizlendi");
   },

@@ -1,4 +1,4 @@
-const CACHE = "yalin-v2";
+const CACHE = "yalin-v3";
 const ASSETS = [
   "./",
   "./index.html",
@@ -9,6 +9,7 @@ const ASSETS = [
   "./js/app.js",
   "./js/storage.js",
   "./js/ui.js",
+  "./js/analyze.js",
   "./js/dashboard.js",
   "./js/reports.js",
   "./js/categories.js",
