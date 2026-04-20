@@ -25,7 +25,9 @@ const Categories = {
     { r: "pareto",   i: "📊", n: "Pareto Analizi",      d: "80/20 kuralı" },
     { r: "a3",       i: "📋", n: "A3 Raporu",           d: "8 bölümlü problem çözüm" },
     { r: "pdca",     i: "🔄", n: "PDCA Döngüsü",        d: "Planla-Uygula-Kontrol-Aksiyon" },
-    { r: "rca",      i: "🔍", n: "Kök Neden Analizi",   d: "Sistematik RCA" }
+    { r: "rca",      i: "🔍", n: "Kök Neden Analizi",   d: "Sistematik RCA" },
+    { r: "fmea",     i: "⚠️", n: "FMEA",                d: "Hata türü ve etki analizi (RPN)" },
+    { r: "spc",      i: "📉", n: "SPC / Kontrol Grafiği", d: "Xbar-R + Cp/Cpk proses yeteneği" }
   ],
 
   renderTools(root) {

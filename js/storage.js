@@ -1,8 +1,15 @@
-/* Persistent storage layer using localStorage */
+/* Persistent storage layer using localStorage (project-scoped) */
 const Storage = (function () {
   const PREFIX = "yalin_";
 
-  function key(k) { return PREFIX + k; }
+  function projectScope() {
+    if (typeof Projects !== "undefined" && Projects.getActive) {
+      return Projects.getActive() + "__";
+    }
+    return "default__";
+  }
+
+  function key(k) { return PREFIX + projectScope() + k; }
 
   function getAll(k) {
     try {
@@ -65,9 +72,11 @@ const Storage = (function () {
   function totalCount() {
     const keys = [
       "why5", "fishbone", "pareto", "a3", "pdca", "rca",
+      "fmea", "spc",
       "takt", "oee", "smed", "vsm", "fives", "kanban",
       "andon", "heijunka", "kaizen", "muda", "pokayoke",
-      "jit", "jidoka", "sqdcp", "gemba", "asakai"
+      "jit", "jidoka", "sqdcp", "gemba", "asakai",
+      "actions"
     ];
     return keys.reduce((sum, k) => sum + getAll(k).length, 0);
   }

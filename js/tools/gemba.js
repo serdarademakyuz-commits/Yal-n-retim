@@ -1,9 +1,10 @@
 const Gemba = {
   KEY: "gemba",
-  state: { editingId: null, observations: [] },
+  state: { editingId: null, observations: [], photos: [] },
   render(root) {
     this.state.editingId = null;
     this.state.observations = [];
+    this.state.photos = [];
     const list = Storage.getAll(this.KEY);
     root.innerHTML = `
       ${UI.hero("👣", "Gemba Yürüyüşü", "Gerçek yere git, gerçek şeyi gör, gerçek olgulardan öğren.")}
@@ -49,6 +50,11 @@ const Gemba = {
       </div>
 
       <div class="card">
+        <h3>📸 Fotoğraflar</h3>
+        <div id="photos"></div>
+      </div>
+
+      <div class="card">
         <h3>📝 Sonuç ve Aksiyon</h3>
         <textarea id="summary" placeholder="Genel özet, öğrenilenler, alınacak aksiyonlar"></textarea>
         <div class="btn-row" style="margin-top:10px">
@@ -75,6 +81,10 @@ const Gemba = {
     };
     root.querySelector("#saveBtn").onclick = () => this.save(root);
     root.querySelector("#clearBtn").onclick = () => this.clearForm(root);
+    UI.photoField(root.querySelector("#photos"),
+      () => this.state.photos,
+      (l) => { this.state.photos = l; },
+      { label: "📸 Saha Fotoğrafları", capture: true });
     this.renderObs(root);
     this.renderList(root);
     this.renderAnalysis(root);
@@ -104,12 +114,13 @@ const Gemba = {
     const list = Storage.getAll(this.KEY);
     if (!list.length) { wrap.innerHTML = UI.emptyState("👣", "Henüz yürüyüş yok."); return; }
     wrap.innerHTML = list.map(it => `
-      <div class="list-item" data-id="${it.id}">
+      <div class="list-item" data-id="${it.id}" style="display:block">
         <div class="li-main">
           <div class="li-title">${UI.escape(it.area || "")} - ${UI.escape(it.focus || "")}</div>
           <div class="li-sub">${UI.escape(it.date || "")} ${UI.escape(it.time || "")} • ${UI.escape(it.walker || "")}</div>
-          <div class="li-sub">${(it.observations || []).length} gözlem</div>
+          <div class="li-sub">${(it.observations || []).length} gözlem${(it.photos || []).length ? " • 📸 " + it.photos.length + " foto" : ""}</div>
         </div>
+        ${UI.renderPhotos(it.photos)}
         <div class="li-actions">
           <button class="btn btn-outline btn-sm" data-action="edit">✏️</button>
           <button class="btn btn-danger btn-sm" data-action="del">🗑️</button>
@@ -125,10 +136,15 @@ const Gemba = {
       const it = Storage.getOne(this.KEY, id);
       this.state.editingId = id;
       this.state.observations = [...(it.observations || [])];
+      this.state.photos = [...(it.photos || [])];
       ["date", "time", "area", "walker", "participants", "focus", "summary"].forEach(k => {
         const el = root.querySelector("#" + k); if (el) el.value = it[k] || "";
       });
       this.renderObs(root);
+      UI.photoField(root.querySelector("#photos"),
+        () => this.state.photos,
+        (l) => { this.state.photos = l; },
+        { label: "📸 Saha Fotoğrafları", capture: true });
       root.querySelector("#saveBtn").textContent = "💾 Güncelle";
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
@@ -136,8 +152,13 @@ const Gemba = {
   clearForm(root) {
     this.state.editingId = null;
     this.state.observations = [];
+    this.state.photos = [];
     ["date", "time", "area", "walker", "participants", "summary"].forEach(k => root.querySelector("#" + k).value = "");
     this.renderObs(root);
+    UI.photoField(root.querySelector("#photos"),
+      () => this.state.photos,
+      (l) => { this.state.photos = l; },
+      { label: "📸 Saha Fotoğrafları", capture: true });
     root.querySelector("#saveBtn").textContent = "💾 Kaydet";
     UI.toast("Temizlendi");
   },
@@ -152,7 +173,8 @@ const Gemba = {
       participants: root.querySelector("#participants").value,
       focus: root.querySelector("#focus").value,
       summary: root.querySelector("#summary").value,
-      observations: this.state.observations
+      observations: this.state.observations,
+      photos: this.state.photos
     };
     if (this.state.editingId) Storage.update(this.KEY, this.state.editingId, data);
     else Storage.add(this.KEY, data);

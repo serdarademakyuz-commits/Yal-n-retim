@@ -23,6 +23,12 @@
     <button class="icon-btn" id="homeBtn" aria-label="Ana Sayfa">🏠</button>
   </header>
 
+  <div class="project-bar" data-no-print>
+    <span class="pb-label">📁 Proje:</span>
+    <select id="projectSelect" aria-label="Aktif proje"></select>
+    <button id="projectManage" aria-label="Projeleri yönet">⚙️</button>
+  </div>
+
   <nav class="side-nav" id="sideNav">
     <div class="nav-header">
       <span>Araçlar</span>
@@ -31,6 +37,8 @@
     <div class="nav-section">
       <h4>📊 Panel</h4>
       <button class="nav-item" data-route="dashboard">📈 Dashboard</button>
+      <button class="nav-item" data-route="actions">🎯 Aksiyonlar</button>
+      <button class="nav-item" data-route="projects">📁 Projeler</button>
       <button class="nav-item" data-route="reports">📄 Raporlar</button>
     </div>
     <div class="nav-section">
@@ -41,6 +49,8 @@
       <button class="nav-item" data-route="a3">📋 A3 Rapor</button>
       <button class="nav-item" data-route="pdca">🔄 PDCA</button>
       <button class="nav-item" data-route="rca">🔍 Kök Neden Analizi</button>
+      <button class="nav-item" data-route="fmea">⚠️ FMEA</button>
+      <button class="nav-item" data-route="spc">📉 SPC / Kontrol Grafiği</button>
     </div>
     <div class="nav-section">
       <h4>🏭 Yalın Üretim</h4>
@@ -78,12 +88,17 @@
 
   <div id="toast" class="toast"></div>
 
+  <script src="js/projects.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/analyze.js"></script>
   <script src="js/dashboard.js"></script>
   <script src="js/reports.js"></script>
   <script src="js/categories.js"></script>
+  <script src="js/tools/actions.js"></script>
+  <script src="js/tools/fmea.js"></script>
+  <script src="js/tools/spc.js"></script>
+  <script src="js/tools/projects_page.js"></script>
   <script src="js/tools/why5.js"></script>
   <script src="js/tools/fishbone.js"></script>
   <script src="js/tools/pareto.js"></script>

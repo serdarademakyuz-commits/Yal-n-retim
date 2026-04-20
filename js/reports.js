@@ -2,21 +2,25 @@ const Reports = {
   labels: {
     why5: "5 Neden Analizi", fishbone: "Balık Kılçığı", pareto: "Pareto",
     a3: "A3 Raporu", pdca: "PDCA", rca: "Kök Neden Analizi",
+    fmea: "FMEA", spc: "SPC / Kontrol Grafiği",
     takt: "Takt Zamanı", oee: "OEE Hesaplama", smed: "SMED",
     vsm: "Değer Akış Haritası", fives: "5S Denetim", kanban: "Kanban Panosu",
     andon: "Andon Kayıtları", heijunka: "Heijunka Planı", kaizen: "Kaizen",
     muda: "Muda/Mura/Muri", pokayoke: "Poka-Yoke", jit: "JIT",
-    jidoka: "Jidoka", sqdcp: "SQDCP", gemba: "Gemba", asakai: "Asakai"
+    jidoka: "Jidoka", sqdcp: "SQDCP", gemba: "Gemba", asakai: "Asakai",
+    actions: "Aksiyonlar"
   },
 
   modules: {
     why5: "Why5", fishbone: "Fishbone", pareto: "Pareto",
     a3: "A3", pdca: "PDCA", rca: "RCA",
+    fmea: "FMEA", spc: "SPC",
     takt: "Takt", oee: "OEE", smed: "SMED",
     vsm: "VSM", fives: "Fives", kanban: "Kanban",
     andon: "Andon", heijunka: "Heijunka", kaizen: "Kaizen",
     muda: "Muda", pokayoke: "PokaYoke", jit: "JIT",
-    jidoka: "Jidoka", sqdcp: "SQDCP", gemba: "Gemba", asakai: "Asakai"
+    jidoka: "Jidoka", sqdcp: "SQDCP", gemba: "Gemba", asakai: "Asakai",
+    actions: "Actions"
   },
 
   runAnalysis(key) {
@@ -68,6 +72,7 @@ const Reports = {
           <button class="btn btn-primary" id="exportAll">💾 Tümünü İndir (JSON)</button>
           <button class="btn btn-accent" id="exportTxt">📄 Metin Rapor</button>
           <button class="btn btn-success" id="exportMd">📝 Analiz Raporu (MD)</button>
+          <button class="btn btn-warn" id="printPdf">🖨️ Yazdır / PDF</button>
           <button class="btn btn-outline" id="importBtn">📥 İçe Aktar</button>
           <input type="file" id="importFile" accept=".json" hidden>
           <button class="btn btn-danger" id="clearAll">🗑️ Tümünü Sil</button>
@@ -114,6 +119,8 @@ const Reports = {
     };
 
     root.querySelector("#exportMd").onclick = () => this.exportMarkdown();
+
+    root.querySelector("#printPdf").onclick = () => UI.printPage();
 
     root.querySelector("#importBtn").onclick = () => root.querySelector("#importFile").click();
     root.querySelector("#importFile").onchange = (e) => {

@@ -63,5 +63,91 @@ const UI = (function () {
     URL.revokeObjectURL(url);
   }
 
-  return { el, toast, confirm, hero, emptyState, fmtDate, escape, actionButtons, downloadText };
+  const MAX_PHOTO_DIM = 1024;
+  const MAX_PHOTO_QUALITY = 0.8;
+
+  function photosToDataURL(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = reject;
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          const scale = Math.min(1, MAX_PHOTO_DIM / Math.max(width, height));
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
+          const canvas = document.createElement("canvas");
+          canvas.width = width; canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+          try { resolve(canvas.toDataURL("image/jpeg", MAX_PHOTO_QUALITY)); }
+          catch (e) { resolve(reader.result); }
+        };
+        img.onerror = () => resolve(reader.result);
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  /*
+   * Renders a photo-attachment field and wires change handlers.
+   * `getList` / `setList` let the caller own the state (array of dataURLs).
+   */
+  function photoField(container, getList, setList, opts) {
+    opts = opts || {};
+    const label = opts.label || "📸 Fotoğraflar";
+    const render = () => {
+      const list = getList() || [];
+      container.innerHTML = `
+        <label>${label}</label>
+        <input type="file" accept="image/*" multiple class="photo-input" ${opts.capture ? 'capture="environment"' : ""}>
+        <div class="photo-grid">
+          ${list.map((src, i) => `
+            <div class="photo-thumb">
+              <img src="${src}" alt="Foto ${i + 1}">
+              <button type="button" class="photo-del" data-i="${i}" data-no-print>✕</button>
+            </div>
+          `).join("")}
+        </div>
+      `;
+      container.querySelector(".photo-input").onchange = async (e) => {
+        const files = Array.from(e.target.files || []);
+        if (!files.length) return;
+        const current = getList() || [];
+        for (const f of files) {
+          try {
+            const d = await photosToDataURL(f);
+            current.push(d);
+          } catch (err) { toast("Fotoğraf okunamadı", "danger"); }
+        }
+        setList(current);
+        render();
+      };
+      container.querySelectorAll(".photo-del").forEach(b => b.onclick = () => {
+        const i = +b.dataset.i;
+        const cur = getList() || [];
+        cur.splice(i, 1);
+        setList(cur);
+        render();
+      });
+    };
+    render();
+    return { refresh: render };
+  }
+
+  function renderPhotos(photos) {
+    if (!photos || !photos.length) return "";
+    return `<div class="photo-grid">${photos.map(src => `
+      <div class="photo-thumb"><img src="${src}" alt="Foto"></div>
+    `).join("")}</div>`;
+  }
+
+  function printPage() {
+    if (typeof window !== "undefined" && window.print) window.print();
+  }
+
+  return { el, toast, confirm, hero, emptyState, fmtDate, escape, actionButtons,
+           downloadText, photoField, renderPhotos, printPage };
 })();

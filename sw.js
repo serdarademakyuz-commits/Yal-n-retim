@@ -1,4 +1,4 @@
-const CACHE = "yalin-v4";
+const CACHE = "yalin-v5";
 const ASSETS = [
   "./",
   "./index.html",
@@ -7,12 +7,17 @@ const ASSETS = [
   "./icons/icon-192.svg",
   "./icons/icon-512.svg",
   "./js/app.js",
+  "./js/projects.js",
   "./js/storage.js",
   "./js/ui.js",
   "./js/analyze.js",
   "./js/dashboard.js",
   "./js/reports.js",
   "./js/categories.js",
+  "./js/tools/actions.js",
+  "./js/tools/fmea.js",
+  "./js/tools/spc.js",
+  "./js/tools/projects_page.js",
   "./js/tools/why5.js",
   "./js/tools/fishbone.js",
   "./js/tools/pareto.js",

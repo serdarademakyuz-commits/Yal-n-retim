@@ -5,12 +5,16 @@ const Router = (function () {
     tools:      { title: "Yalın Üretim Araçları",     render: (r) => Categories.renderTools(r) },
     techniques: { title: "Problem Çözme Teknikleri",  render: (r) => Categories.renderTechniques(r) },
     reports:    { title: "Raporlar",                  render: (r) => Reports.render(r) },
+    projects:  { title: "Proje Yönetimi",           render: (r) => ProjectsPage.render(r) },
+    actions:   { title: "Aksiyon Takip Merkezi",    render: (r) => Actions.render(r) },
     why5:      { title: "5 Neden Analizi",          render: (r) => Why5.render(r) },
     fishbone:  { title: "Balık Kılçığı Diyagramı",  render: (r) => Fishbone.render(r) },
     pareto:    { title: "Pareto Analizi",           render: (r) => Pareto.render(r) },
     a3:        { title: "A3 Raporu",                render: (r) => A3.render(r) },
     pdca:      { title: "PDCA Döngüsü",             render: (r) => PDCA.render(r) },
     rca:       { title: "Kök Neden Analizi",        render: (r) => RCA.render(r) },
+    fmea:      { title: "FMEA Risk Analizi",        render: (r) => FMEA.render(r) },
+    spc:       { title: "SPC / Kontrol Grafiği",    render: (r) => SPC.render(r) },
     takt:      { title: "Takt Zamanı Hesaplama",    render: (r) => Takt.render(r) },
     oee:       { title: "OEE / TPM Hesaplama",      render: (r) => OEE.render(r) },
     smed:      { title: "SMED Analizi",             render: (r) => SMED.render(r) },
@@ -57,11 +61,36 @@ const Router = (function () {
     document.getElementById("navBackdrop").classList.add("open");
   }
 
+  function refreshProjectBar() {
+    const sel = document.getElementById("projectSelect");
+    if (!sel) return;
+    const list = Projects.list();
+    const active = Projects.getActive();
+    sel.innerHTML = list.map(p => `<option value="${p.id}"${p.id === active ? " selected" : ""}>${p.name}</option>`).join("");
+  }
+
   function init() {
+    if (typeof Projects !== "undefined") {
+      Projects.migrateLegacy();
+      Projects.ensureDefault();
+    }
+
     document.getElementById("menuBtn").onclick = openNav;
     document.getElementById("closeNav").onclick = closeNav;
     document.getElementById("navBackdrop").onclick = closeNav;
     document.getElementById("homeBtn").onclick = () => go("dashboard");
+
+    const sel = document.getElementById("projectSelect");
+    if (sel) {
+      refreshProjectBar();
+      sel.onchange = (e) => {
+        Projects.setActive(e.target.value);
+        UI.toast("Proje değişti: " + Projects.getActiveProject().name, "success");
+        go((window.location.hash || "#dashboard").slice(1));
+      };
+    }
+    const manageBtn = document.getElementById("projectManage");
+    if (manageBtn) manageBtn.onclick = () => go("projects");
 
     document.addEventListener("click", (e) => {
       const t = e.target.closest("[data-route]");
@@ -75,8 +104,11 @@ const Router = (function () {
     go(initial);
   }
 
-  return { go, init };
+  return { go, init, refreshProjectBar };
 })();
+
+// Expose helper so pages can refresh the project bar
+const App = { refreshProjectBar: () => Router.refreshProjectBar() };
 
 document.addEventListener("DOMContentLoaded", Router.init);
 

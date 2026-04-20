@@ -6,6 +6,8 @@ const Dashboard = {
     { r: "a3",       i: "📋", n: "A3 Rapor" },
     { r: "pdca",     i: "🔄", n: "PDCA" },
     { r: "rca",      i: "🔍", n: "Kök Neden" },
+    { r: "fmea",     i: "⚠️", n: "FMEA" },
+    { r: "spc",      i: "📉", n: "SPC" },
     { r: "takt",     i: "⏱️", n: "Takt Zamanı" },
     { r: "oee",      i: "📈", n: "OEE / TPM" },
     { r: "smed",     i: "⚡", n: "SMED" },
