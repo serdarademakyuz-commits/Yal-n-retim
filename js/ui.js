@@ -63,6 +63,32 @@ const UI = (function () {
     URL.revokeObjectURL(url);
   }
 
+  function csvEscape(v) {
+    if (v == null) return "";
+    const s = typeof v === "object" ? JSON.stringify(v) : String(v);
+    if (/[";\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+
+  /* Converts an array of records into CSV (UTF-8 with BOM so Excel renders Turkish chars correctly). */
+  function toCSV(rows, headers) {
+    if (!rows || !rows.length) return "";
+    const cols = (headers && headers.length) ? headers : Object.keys(rows[0]);
+    const lines = [cols.join(";")];
+    rows.forEach(r => lines.push(cols.map(c => csvEscape(r[c])).join(";")));
+    return "\uFEFF" + lines.join("\r\n");
+  }
+
+  function downloadCSV(filename, rows, headers) {
+    const csv = toCSV(rows, headers);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  }
+
   const MAX_PHOTO_DIM = 1024;
   const MAX_PHOTO_QUALITY = 0.8;
 
@@ -149,5 +175,5 @@ const UI = (function () {
   }
 
   return { el, toast, confirm, hero, emptyState, fmtDate, escape, actionButtons,
-           downloadText, photoField, renderPhotos, printPage };
+           downloadText, toCSV, downloadCSV, photoField, renderPhotos, printPage };
 })();

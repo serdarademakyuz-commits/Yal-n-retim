@@ -71,6 +71,7 @@ const Why5 = {
           </div>
         </div>
         <div class="li-actions">
+          <button class="btn btn-primary btn-sm" data-action="toA3">📋 A3'e</button>
           <button class="btn btn-outline btn-sm" data-action="edit">✏️</button>
           <button class="btn btn-danger btn-sm" data-action="del">🗑️</button>
         </div>
@@ -86,6 +87,33 @@ const Why5 = {
       const it = Storage.getOne(this.KEY, id);
       this.fillForm(root, it);
     });
+    wrap.querySelectorAll("[data-action=toA3]").forEach(b => b.onclick = (e) => {
+      const id = e.target.closest(".list-item").dataset.id;
+      const it = Storage.getOne(this.KEY, id);
+      this.transferToA3(it);
+    });
+  },
+
+  /* Seeds a new A3 record with the 5 Why analysis pre-filled in the relevant sections. */
+  transferToA3(it) {
+    if (!it) { UI.toast("Kayıt bulunamadı", "danger"); return; }
+    const whysText = (it.whys || []).filter(Boolean).map((w, i) => `${i+1}. ${w}`).join("\n");
+    Storage.add("a3", {
+      title: "A3 — " + (it.problem || "5 Neden Aktarımı"),
+      owner: "", date: new Date().toISOString().slice(0, 10),
+      background: it.area ? `Alan/Hat: ${it.area}` : "",
+      current: it.problem || "",
+      goal: "",
+      analysis: whysText + (it.root ? `\n\n🎯 Kök Neden: ${it.root}` : ""),
+      countermeasures: it.action || "",
+      plan: "",
+      followup: "",
+      result: "",
+      source: "why5",
+      sourceId: it.id
+    });
+    UI.toast("A3 oluşturuldu", "success");
+    Router.go("a3");
   },
 
   fillForm(root, it) {

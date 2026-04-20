@@ -162,11 +162,17 @@ const Pareto = {
           <div class="li-sub">${UI.escape(it.period || "")} • ${it.items.length} kategori • ${UI.fmtDate(it.updatedAt)}</div>
         </div>
         <div class="li-actions">
+          <button class="btn btn-primary btn-sm" data-action="toFmea">⚠️ FMEA'ya</button>
           <button class="btn btn-outline btn-sm" data-action="edit">✏️</button>
           <button class="btn btn-danger btn-sm" data-action="del">🗑️</button>
         </div>
       </div>
     `).join("");
+    wrap.querySelectorAll("[data-action=toFmea]").forEach(b => b.onclick = (e) => {
+      const id = e.target.closest(".list-item").dataset.id;
+      const it = Storage.getOne(this.KEY, id);
+      this.transferToFMEA(it);
+    });
     wrap.querySelectorAll("[data-action=del]").forEach(b => b.onclick = (e) => {
       const id = e.target.closest(".list-item").dataset.id;
       if (UI.confirm("Silinsin mi?")) { Storage.remove(this.KEY, id); UI.toast("Silindi", "danger"); this.render(root); }
@@ -207,6 +213,35 @@ const Pareto = {
     else Storage.add(this.KEY, data);
     UI.toast("Kaydedildi", "success");
     this.render(root);
+  },
+
+  /* Pulls Pareto "vital few" into a new FMEA record with one row per top category.
+     This is how a consultant turns "what matters most" into "what could go wrong". */
+  transferToFMEA(paretoRecord) {
+    if (!paretoRecord || !paretoRecord.items || !paretoRecord.items.length) {
+      UI.toast("Pareto veri yok", "danger"); return;
+    }
+    const a = this.analyze(paretoRecord.items);
+    const vitals = (a.vital || []).slice(0, 10);
+    if (!vitals.length) { UI.toast("Hayati az kategori yok", "danger"); return; }
+    const rows = vitals.map(v => ({
+      process: paretoRecord.title || "",
+      func: "",
+      failureMode: v.cat,
+      effect: `${v.val} adet (Pareto top)`,
+      S: 6, cause: "", O: 5, controls: "", D: 5,
+      action: "",
+      newRPN: 0
+    }));
+    Storage.add("fmea", {
+      title: "FMEA — " + (paretoRecord.title || "Pareto aktarımı"),
+      scope: paretoRecord.period || "",
+      rows,
+      source: "pareto",
+      sourceId: paretoRecord.id
+    });
+    UI.toast("FMEA oluşturuldu (" + rows.length + " satır)", "success");
+    Router.go("fmea");
   },
 
   analyze(items) {

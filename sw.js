@@ -1,4 +1,4 @@
-const CACHE = "yalin-v5";
+const CACHE = "yalin-v6";
 const ASSETS = [
   "./",
   "./index.html",
@@ -39,7 +39,13 @@ const ASSETS = [
   "./js/tools/jidoka.js",
   "./js/tools/sqdcp.js",
   "./js/tools/gemba.js",
-  "./js/tools/asakai.js"
+  "./js/tools/asakai.js",
+  "./js/tools/dmaic.js",
+  "./js/tools/hoshin.js",
+  "./js/tools/hypothesis.js",
+  "./js/tools/audit.js",
+  "./js/tools/trends.js",
+  "./js/tools/consultant.js"
 ];
 
 self.addEventListener("install", (e) => {

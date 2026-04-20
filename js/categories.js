@@ -16,7 +16,10 @@ const Categories = {
     { r: "jidoka",   i: "🤖", n: "Jidoka",             d: "Otonomasyon" },
     { r: "sqdcp",    i: "🪪", n: "SQDCP",              d: "Performans panosu" },
     { r: "gemba",    i: "👣", n: "Gemba",              d: "Saha yürüyüşü" },
-    { r: "asakai",   i: "🌅", n: "Asakai",             d: "Sabah toplantısı" }
+    { r: "asakai",   i: "🌅", n: "Asakai",             d: "Sabah toplantısı" },
+    { r: "hoshin",   i: "🧭", n: "Hoshin Kanri",       d: "X-Matrix stratejik dağıtım" },
+    { r: "trends",   i: "📈", n: "Trendler",           d: "OEE/5S/Takt zaman serisi" },
+    { r: "consultant", i: "📑", n: "Danışmanlık Raporu", d: "Kapak + özet + imza" }
   ],
 
   TECHNIQUES: [
@@ -27,7 +30,10 @@ const Categories = {
     { r: "pdca",     i: "🔄", n: "PDCA Döngüsü",        d: "Planla-Uygula-Kontrol-Aksiyon" },
     { r: "rca",      i: "🔍", n: "Kök Neden Analizi",   d: "Sistematik RCA" },
     { r: "fmea",     i: "⚠️", n: "FMEA",                d: "Hata türü ve etki analizi (RPN)" },
-    { r: "spc",      i: "📉", n: "SPC / Kontrol Grafiği", d: "Xbar-R + Cp/Cpk proses yeteneği" }
+    { r: "spc",      i: "📉", n: "SPC / Kontrol Grafiği", d: "Xbar-R + Cp/Cpk proses yeteneği" },
+    { r: "dmaic",    i: "🎯", n: "DMAIC Proje Kartı",    d: "Six Sigma proje kimliği" },
+    { r: "hypothesis", i: "🧪", n: "Hipotez Testi",     d: "t-test, ANOVA, regresyon" },
+    { r: "audit",    i: "📋", n: "Denetim Listeleri",  d: "ISO 9001, IATF, İSG" }
   ],
 
   renderTools(root) {

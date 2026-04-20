@@ -8,7 +8,10 @@ const Reports = {
     andon: "Andon Kayıtları", heijunka: "Heijunka Planı", kaizen: "Kaizen",
     muda: "Muda/Mura/Muri", pokayoke: "Poka-Yoke", jit: "JIT",
     jidoka: "Jidoka", sqdcp: "SQDCP", gemba: "Gemba", asakai: "Asakai",
-    actions: "Aksiyonlar"
+    actions: "Aksiyonlar",
+    dmaic: "DMAIC Proje Kartı", hoshin: "Hoshin Kanri",
+    hypothesis: "Hipotez Testi", audit: "Denetim Listeleri",
+    consultant: "Danışmanlık Raporu"
   },
 
   modules: {
@@ -20,7 +23,10 @@ const Reports = {
     andon: "Andon", heijunka: "Heijunka", kaizen: "Kaizen",
     muda: "Muda", pokayoke: "PokaYoke", jit: "JIT",
     jidoka: "Jidoka", sqdcp: "SQDCP", gemba: "Gemba", asakai: "Asakai",
-    actions: "Actions"
+    actions: "Actions",
+    dmaic: "DMAIC", hoshin: "Hoshin",
+    hypothesis: "Hypothesis", audit: "Audit",
+    consultant: "Consultant"
   },
 
   runAnalysis(key) {
@@ -72,6 +78,7 @@ const Reports = {
           <button class="btn btn-primary" id="exportAll">💾 Tümünü İndir (JSON)</button>
           <button class="btn btn-accent" id="exportTxt">📄 Metin Rapor</button>
           <button class="btn btn-success" id="exportMd">📝 Analiz Raporu (MD)</button>
+          <button class="btn btn-primary" id="exportCsv">📊 Excel / CSV</button>
           <button class="btn btn-warn" id="printPdf">🖨️ Yazdır / PDF</button>
           <button class="btn btn-outline" id="importBtn">📥 İçe Aktar</button>
           <input type="file" id="importFile" accept=".json" hidden>
@@ -119,6 +126,8 @@ const Reports = {
     };
 
     root.querySelector("#exportMd").onclick = () => this.exportMarkdown();
+
+    root.querySelector("#exportCsv").onclick = () => this.exportCSVZip();
 
     root.querySelector("#printPdf").onclick = () => UI.printPage();
 
@@ -177,6 +186,56 @@ const Reports = {
       `<small style="color:var(--muted)">${activeCount} araçtan ${totalInsights} içgörü</small>`,
       sections.join("")
     );
+  },
+
+  /* Flattens a tool record into a row suitable for CSV export. */
+  flattenRecord(key, it) {
+    const base = {
+      id: it.id || "",
+      createdAt: it.createdAt || "",
+      updatedAt: it.updatedAt || ""
+    };
+    const flat = { ...base };
+    Object.keys(it).forEach(k => {
+      if (k === "id" || k === "createdAt" || k === "updatedAt") return;
+      const v = it[k];
+      if (v == null) flat[k] = "";
+      else if (Array.isArray(v)) flat[k] = JSON.stringify(v);
+      else if (typeof v === "object") flat[k] = JSON.stringify(v);
+      else if (typeof v === "string" && v.startsWith("data:image")) flat[k] = "[foto]";
+      else flat[k] = v;
+    });
+    return flat;
+  },
+
+  /* Since browsers can't ship native zips without a library, we emit one concatenated CSV
+     with per-tool section headers. Excel imports it as a single sheet that's easy to filter. */
+  exportCSVZip() {
+    let any = false;
+    const sections = [];
+    Object.keys(this.labels).forEach(k => {
+      const list = Storage.getAll(k);
+      if (!list.length) return;
+      any = true;
+      const rows = list.map(it => this.flattenRecord(k, it));
+      const headerSet = new Set();
+      rows.forEach(r => Object.keys(r).forEach(c => headerSet.add(c)));
+      const headers = ["_arac", ...headerSet];
+      const tagged = rows.map(r => ({ _arac: this.labels[k], ...r }));
+      sections.push(`# ${this.labels[k]} (${list.length})`);
+      sections.push(UI.toCSV(tagged, headers).replace(/^\uFEFF/, ""));
+      sections.push("");
+    });
+    if (!any) { UI.toast("Kayıt yok", "danger"); return; }
+    const csv = "\uFEFF" + sections.join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `yalin_uretim_excel_${Date.now()}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    UI.toast("Excel/CSV indirildi", "success");
   },
 
   exportMarkdown() {

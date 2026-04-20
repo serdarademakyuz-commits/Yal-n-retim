@@ -30,7 +30,13 @@ const Router = (function () {
     jidoka:    { title: "Jidoka - Otonomasyon",     render: (r) => Jidoka.render(r) },
     sqdcp:     { title: "SQDCP Performans Panosu",  render: (r) => SQDCP.render(r) },
     gemba:     { title: "Gemba Yürüyüşü",           render: (r) => Gemba.render(r) },
-    asakai:    { title: "Asakai - Sabah Toplantısı",render: (r) => Asakai.render(r) }
+    asakai:    { title: "Asakai - Sabah Toplantısı",render: (r) => Asakai.render(r) },
+    dmaic:     { title: "DMAIC Proje Kartı",        render: (r) => DMAIC.render(r) },
+    hoshin:    { title: "Hoshin Kanri X-Matrix",    render: (r) => Hoshin.render(r) },
+    hypothesis:{ title: "Hipotez Testi",            render: (r) => Hypothesis.render(r) },
+    audit:     { title: "Denetim Listeleri",        render: (r) => Audit.render(r) },
+    trends:    { title: "Trend Analizi",            render: (r) => Trends.render(r) },
+    consultant:{ title: "Danışmanlık Raporu",       render: (r) => Consultant.render(r) }
   };
 
   function go(route) {

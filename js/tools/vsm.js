@@ -42,6 +42,7 @@ const VSM = {
 
       <div class="card">
         <h3>🗺️ Akış Haritası</h3>
+        <div id="diagram"></div>
         <div id="chain"></div>
       </div>
 
@@ -77,15 +78,84 @@ const VSM = {
       root.querySelector("#ct").value = 0;
       root.querySelector("#lt").value = 0;
       this.renderChain(root);
+      this.renderDiagram(root);
       this.renderMetrics(root);
       this.renderAnalysis(root);
     };
     root.querySelector("#saveBtn").onclick = () => this.save(root);
     root.querySelector("#clearBtn").onclick = () => this.clearForm(root);
     this.renderChain(root);
+    this.renderDiagram(root);
     this.renderMetrics(root);
     this.renderList(root);
     this.renderAnalysis(root);
+  },
+
+  /* Standard VSM-style SVG diagram: process = box, inventory = triangle, transport = truck,
+     timeline below with cycle-time vs wait-time segments (value vs non-value). */
+  renderDiagram(root) {
+    const wrap = root.querySelector("#diagram");
+    if (!wrap) return;
+    const nodes = this.state.nodes || [];
+    if (!nodes.length) { wrap.innerHTML = ""; return; }
+    const boxW = 120, boxH = 70, gap = 50, pad = 20, rowY = 30, timelineY = 130;
+    const w = pad * 2 + nodes.length * boxW + (nodes.length - 1) * gap;
+    const h = 220;
+
+    const shapes = nodes.map((n, i) => {
+      const x = pad + i * (boxW + gap);
+      const color = n.va ? "#16a34a" : "#dc2626";
+      const icon = n.type === "process" ? "🏭" : n.type === "inventory" ? "📦" : "🚚";
+      let shape;
+      if (n.type === "inventory") {
+        shape = `<polygon points="${x + boxW/2},${rowY} ${x + boxW},${rowY + boxH} ${x},${rowY + boxH}" fill="#fef3c7" stroke="${color}" stroke-width="2"/>`;
+      } else if (n.type === "transport") {
+        shape = `<rect x="${x}" y="${rowY}" width="${boxW}" height="${boxH}" rx="30" fill="#dbeafe" stroke="${color}" stroke-width="2"/>`;
+      } else {
+        shape = `<rect x="${x}" y="${rowY}" width="${boxW}" height="${boxH}" fill="#fff" stroke="${color}" stroke-width="2" rx="6"/>`;
+      }
+      return `
+        ${shape}
+        <text x="${x + boxW/2}" y="${rowY + 20}" text-anchor="middle" font-size="12" font-weight="700">${icon} ${UI.escape((n.name || "").slice(0, 14))}</text>
+        <text x="${x + boxW/2}" y="${rowY + 38}" text-anchor="middle" font-size="10" fill="#64748b">CT: ${n.ct || 0}s</text>
+        <text x="${x + boxW/2}" y="${rowY + 52}" text-anchor="middle" font-size="10" fill="#64748b">LT: ${n.lt || 0}dk ${n.op ? "• OP:" + n.op : ""}</text>
+        <text x="${x + boxW/2}" y="${rowY + 66}" text-anchor="middle" font-size="9" fill="${color}" font-weight="700">${n.va ? "✓ VA" : "✗ NVA"}</text>
+      `;
+    }).join("");
+
+    const arrows = nodes.slice(0, -1).map((_, i) => {
+      const x1 = pad + i * (boxW + gap) + boxW;
+      const x2 = pad + (i + 1) * (boxW + gap);
+      return `<line x1="${x1}" y1="${rowY + boxH/2}" x2="${x2 - 6}" y2="${rowY + boxH/2}" stroke="#0a2540" stroke-width="2" marker-end="url(#arrow)"/>`;
+    }).join("");
+
+    const tlSegments = nodes.map((n, i) => {
+      const x = pad + i * (boxW + gap);
+      const ctWidth = boxW * 0.4;
+      const ltWidth = boxW * 0.6;
+      return `
+        <rect x="${x}" y="${timelineY}" width="${ctWidth}" height="18" fill="#16a34a"/>
+        <text x="${x + ctWidth/2}" y="${timelineY + 13}" text-anchor="middle" font-size="9" fill="#fff" font-weight="700">${n.ct || 0}s</text>
+        <rect x="${x + ctWidth}" y="${timelineY}" width="${ltWidth}" height="18" fill="#fca5a5"/>
+        <text x="${x + ctWidth + ltWidth/2}" y="${timelineY + 13}" text-anchor="middle" font-size="9" fill="#7f1d1d" font-weight="700">${n.lt || 0}dk</text>
+      `;
+    }).join("");
+
+    wrap.innerHTML = `
+      <div style="overflow-x:auto;background:#f8fafc;padding:8px;border-radius:8px;border:1px solid var(--border)">
+        <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="min-width:${w}px">
+          <defs>
+            <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+              <path d="M 0 0 L 6 4 L 0 8 z" fill="#0a2540"/>
+            </marker>
+          </defs>
+          ${arrows}
+          ${shapes}
+          <text x="${pad}" y="${timelineY - 6}" font-size="10" fill="#64748b" font-weight="700">Zaman çizgisi (🟢 VA  🔴 NVA)</text>
+          ${tlSegments}
+        </svg>
+      </div>
+    `;
   },
   renderChain(root) {
     const w = root.querySelector("#chain");
@@ -107,7 +177,7 @@ const VSM = {
     `;
     w.querySelectorAll("button[data-i]").forEach(b => b.onclick = (e) => {
       this.state.nodes.splice(+e.target.dataset.i, 1);
-      this.renderChain(root); this.renderMetrics(root); this.renderAnalysis(root);
+      this.renderChain(root); this.renderDiagram(root); this.renderMetrics(root); this.renderAnalysis(root);
     });
   },
   renderMetrics(root) {
@@ -166,7 +236,7 @@ const VSM = {
       root.querySelector("#title").value = it.title || "";
       root.querySelector("#demand").value = it.demand || 1000;
       root.querySelector("#avail").value = it.avail || 28800;
-      this.renderChain(root); this.renderMetrics(root); this.renderAnalysis(root);
+      this.renderChain(root); this.renderDiagram(root); this.renderMetrics(root); this.renderAnalysis(root);
       root.querySelector("#saveBtn").textContent = "💾 Güncelle";
       window.scrollTo({ top: 0, behavior: "smooth" });
     });

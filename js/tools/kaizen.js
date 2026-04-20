@@ -20,6 +20,12 @@ const Kaizen = {
           <div class="field"><label>Zaman Kazancı (dk/gün)</label><input id="timeSave" type="number" step="0.1" value="0"></div>
           <div class="field"><label>Maliyet Kazancı (TL/ay)</label><input id="costSave" type="number" step="1" value="0"></div>
         </div>
+        <h4 style="margin:10px 0 6px;color:var(--navy)">💰 ROI / Geri Ödeme</h4>
+        <div class="grid-2">
+          <div class="field"><label>Yatırım Tutarı (TL)</label><input id="investment" type="number" step="1" value="0"></div>
+          <div class="field"><label>Uygulama Süresi (ay)</label><input id="implMonths" type="number" step="1" value="1"></div>
+        </div>
+        <div id="roiPreview" style="margin-top:6px"></div>
         <div class="field"><label>Kategori</label>
           <select id="category">
             <option>Güvenlik</option><option>Kalite</option><option>Maliyet</option>
@@ -53,21 +59,57 @@ const Kaizen = {
     `;
     root.querySelector("#saveBtn").onclick = () => this.save(root);
     root.querySelector("#clearBtn").onclick = () => this.clearForm(root);
+    ["costSave","investment","implMonths"].forEach(id => {
+      const el = root.querySelector("#" + id);
+      if (el) el.oninput = () => this.renderROI(root);
+    });
+    this.renderROI(root);
     this.renderSummary(root);
     this.renderList(root);
     this.renderAnalysis(root);
+  },
+
+  computeROI(costSaveMonthly, investment, implMonths) {
+    const monthly = +costSaveMonthly || 0;
+    const inv = +investment || 0;
+    const impl = +implMonths || 0;
+    const annualSave = monthly * 12;
+    const payback = monthly > 0 ? (inv / monthly) + impl : null;
+    const roi1y = inv > 0 ? ((annualSave - inv) / inv) * 100 : null;
+    return { annualSave, payback, roi1y };
+  },
+
+  renderROI(root) {
+    const wrap = root.querySelector("#roiPreview");
+    if (!wrap) return;
+    const c = +root.querySelector("#costSave").value || 0;
+    const i = +root.querySelector("#investment").value || 0;
+    const m = +root.querySelector("#implMonths").value || 0;
+    const r = this.computeROI(c, i, m);
+    wrap.innerHTML = `
+      <div class="kpi-grid">
+        <div class="kpi success"><div class="label">Yıllık Tasarruf</div><div class="value">${r.annualSave.toLocaleString("tr-TR")}₺</div></div>
+        <div class="kpi amber"><div class="label">Geri Ödeme</div><div class="value">${r.payback != null ? r.payback.toFixed(1) + " ay" : "—"}</div></div>
+        <div class="kpi ${r.roi1y != null && r.roi1y > 0 ? 'success' : ''}"><div class="label">1. Yıl ROI</div><div class="value">${r.roi1y != null ? r.roi1y.toFixed(0) + "%" : "—"}</div></div>
+      </div>
+    `;
   },
   renderSummary(root) {
     const list = Storage.getAll(this.KEY);
     const done = list.filter(x => x.status === "done");
     const totalTime = done.reduce((s, x) => s + (+x.timeSave || 0), 0);
     const totalCost = done.reduce((s, x) => s + (+x.costSave || 0), 0);
+    const totalInv = done.reduce((s, x) => s + (+x.investment || 0), 0);
+    const annualSave = totalCost * 12;
+    const netAnnual = annualSave - totalInv;
     root.querySelector("#summary").innerHTML = `
       <div class="kpi-grid">
         <div class="kpi amber"><div class="label">Toplam</div><div class="value">${list.length}</div></div>
         <div class="kpi success"><div class="label">Tamamlanan</div><div class="value">${done.length}</div></div>
         <div class="kpi"><div class="label">Zaman</div><div class="value">${totalTime.toFixed(0)} dk/gün</div></div>
-        <div class="kpi"><div class="label">Maliyet</div><div class="value">${totalCost.toLocaleString("tr-TR")}₺/ay</div></div>
+        <div class="kpi"><div class="label">Aylık</div><div class="value">${totalCost.toLocaleString("tr-TR")}₺</div></div>
+        <div class="kpi success"><div class="label">Yıllık Tasarruf</div><div class="value">${annualSave.toLocaleString("tr-TR")}₺</div></div>
+        <div class="kpi ${netAnnual >= 0 ? 'success' : 'danger'}"><div class="label">Net 1. Yıl</div><div class="value">${netAnnual.toLocaleString("tr-TR")}₺</div></div>
       </div>
     `;
   },
@@ -98,9 +140,10 @@ const Kaizen = {
       const id = e.target.closest(".list-item").dataset.id;
       const it = Storage.getOne(this.KEY, id);
       this.state.editingId = id;
-      ["title", "author", "area", "before", "after", "timeSave", "costSave", "category", "status"].forEach(k => {
+      ["title", "author", "area", "before", "after", "timeSave", "costSave", "investment", "implMonths", "category", "status"].forEach(k => {
         const el = root.querySelector("#" + k); if (el) el.value = it[k] || "";
       });
+      this.renderROI(root);
       root.querySelector("#saveBtn").textContent = "💾 Güncelle";
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
@@ -119,7 +162,7 @@ const Kaizen = {
     const title = root.querySelector("#title").value.trim();
     if (!title) { UI.toast("Başlık gerekli", "danger"); return; }
     const d = { title };
-    ["author", "area", "before", "after", "timeSave", "costSave", "category", "status"].forEach(k => {
+    ["author", "area", "before", "after", "timeSave", "costSave", "investment", "implMonths", "category", "status"].forEach(k => {
       d[k] = root.querySelector("#" + k).value;
     });
     if (this.state.editingId) Storage.update(this.KEY, this.state.editingId, d);
