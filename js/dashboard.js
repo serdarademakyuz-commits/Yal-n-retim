@@ -79,6 +79,11 @@ const Dashboard = {
       </div>
 
       <div class="card">
+        <h3>🧭 Her Aracın Paneli</h3>
+        <div id="allToolDashboards" class="all-tool-dashboards"></div>
+      </div>
+
+      <div class="card">
         <h3>⚡ Hızlı İşlem</h3>
         <div class="btn-row">
           <button class="btn btn-danger" data-route="andon">🚦 Acil Andon</button>
@@ -136,7 +141,66 @@ const Dashboard = {
       .slice(0, 10);
     this.drawBars(root.querySelector("#chart-usage"), usageData, { showEmpty: true });
 
+    this.renderAllToolDashboards(root);
     this.renderFeed(root);
+  },
+
+  renderAllToolDashboards(root) {
+    const wrap = root.querySelector("#allToolDashboards");
+    if (!wrap) return;
+    const now = new Date();
+    const thisMonth = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000).toISOString();
+    const cards = this.tiles.map(t => {
+      const records = Storage.getAll(t.r) || [];
+      let cntMonth = 0, cntWeek = 0, cntClosed = 0;
+      const buckets = {};
+      records.forEach(r => {
+        const ts = r.createdAt || r.updatedAt || "";
+        if (ts) {
+          const d = new Date(ts);
+          const mk = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+          if (mk === thisMonth) cntMonth++;
+          if (ts >= sevenDaysAgo) cntWeek++;
+          buckets[mk] = (buckets[mk] || 0) + 1;
+        }
+        if (r.status === "done" || r.status === "resolved" || r.status === "closed") cntClosed++;
+      });
+      const closedPct = records.length > 0 ? Math.round((cntClosed / records.length) * 100) : 0;
+      const series = Object.keys(buckets).sort().slice(-6).map(k => ({ label: k.slice(2), value: buckets[k] }));
+      const chart = this.miniBarSVG(series);
+      const tone = records.length === 0 ? "empty" : cntWeek > 0 ? "active" : "idle";
+      return `
+        <div class="atd-card atd-${tone}" data-route="${t.r}">
+          <div class="atd-head">
+            <span class="atd-ico">${t.i}</span>
+            <span class="atd-name">${t.n}</span>
+            <span class="atd-total">${records.length}</span>
+          </div>
+          <div class="atd-stats">
+            <div><small>Ay</small><strong>${cntMonth}</strong></div>
+            <div><small>7g</small><strong>${cntWeek}</strong></div>
+            <div><small>Kapan</small><strong>${closedPct}%</strong></div>
+          </div>
+          ${chart}
+        </div>
+      `;
+    }).join("");
+    wrap.innerHTML = cards;
+  },
+
+  miniBarSVG(series) {
+    if (!series || !series.length) return `<div class="atd-empty">📭</div>`;
+    const w = 120, h = 30, pad = 2;
+    const max = Math.max(1, ...series.map(s => s.value));
+    const bw = (w - 2 * pad) / series.length;
+    const bars = series.map((p, i) => {
+      const bh = Math.round((p.value / max) * (h - 2 * pad));
+      const x = pad + i * bw + 1;
+      const y = h - pad - bh;
+      return `<rect x="${x}" y="${y}" width="${(bw - 2).toFixed(1)}" height="${bh}" fill="currentColor" opacity="0.75" rx="1"/>`;
+    }).join("");
+    return `<svg viewBox="0 0 ${w} ${h}" class="atd-chart" style="width:100%;height:30px;color:var(--navy)">${bars}</svg>`;
   },
 
   collectKPIs() {

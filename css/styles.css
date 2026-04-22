@@ -279,6 +279,42 @@ html[data-theme="dark"] .tool-mini-dash { background: linear-gradient(135deg, #1
 html[data-theme="dark"] .tmd-stat { background: var(--surface-2); color: var(--text); }
 html[data-theme="dark"] .tmd-stat .v { color: #f1f5f9; }
 
+.all-tool-dashboards {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+}
+@media (min-width: 640px) { .all-tool-dashboards { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 900px) { .all-tool-dashboards { grid-template-columns: repeat(4, 1fr); } }
+.atd-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 10px;
+  cursor: pointer; transition: transform .15s, box-shadow .15s;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.atd-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.atd-card.atd-active { border-left: 3px solid var(--success); }
+.atd-card.atd-idle   { border-left: 3px solid var(--amber); }
+.atd-card.atd-empty  { opacity: 0.55; }
+.atd-head {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700; color: var(--navy);
+}
+.atd-head .atd-ico { font-size: 18px; }
+.atd-head .atd-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.atd-head .atd-total {
+  background: var(--amber); color: var(--navy);
+  border-radius: 10px; padding: 2px 8px; font-size: 11px; font-weight: 800;
+}
+.atd-stats {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+  text-align: center; font-size: 11px;
+}
+.atd-stats small { display: block; color: var(--muted); font-size: 9px; text-transform: uppercase; }
+.atd-stats strong { font-size: 13px; color: var(--navy); }
+.atd-empty { text-align: center; font-size: 16px; opacity: 0.5; padding: 4px; }
+html[data-theme="dark"] .atd-card { background: var(--surface-2); }
+html[data-theme="dark"] .atd-head, html[data-theme="dark"] .atd-stats strong { color: var(--text); }
+html[data-theme="dark"] .atd-chart { color: #94a3b8; }
+
 .kpi-grid {
   display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
   margin-bottom: 14px;
