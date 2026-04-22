@@ -123,11 +123,11 @@ const UI = (function () {
    */
   function photoField(container, getList, setList, opts) {
     opts = opts || {};
-    const label = opts.label || "📸 Fotoğraflar";
+    const label = opts.label == null ? "📸 Fotoğraflar" : opts.label;
     const render = () => {
       const list = getList() || [];
       container.innerHTML = `
-        <label>${label}</label>
+        ${label ? `<label>${label}</label>` : ""}
         <input type="file" accept="image/*" multiple class="photo-input" ${opts.capture ? 'capture="environment"' : ""}>
         <div class="photo-grid">
           ${list.map((src, i) => `
@@ -175,11 +175,11 @@ const UI = (function () {
      Photos are persisted per-project per-tool in Storage under `<route>_photos`. */
   function toolPhotos(root, routeKey, label) {
     if (!root || !routeKey) return;
-    if (root.querySelector(`.tool-photos-card[data-route="${routeKey}"]`)) return;
+    if (root.querySelector(`.tool-photos-card[data-tp-route="${routeKey}"]`)) return;
     const storageKey = routeKey + "_photos";
     const card = document.createElement("div");
     card.className = "card tool-photos-card";
-    card.setAttribute("data-route", routeKey);
+    card.setAttribute("data-tp-route", routeKey);
     card.setAttribute("data-no-print", "");
     card.innerHTML = `
       <h3 style="display:flex;justify-content:space-between;align-items:center;cursor:pointer">
@@ -199,7 +199,7 @@ const UI = (function () {
       body.style.display = open ? "" : "none";
       card.querySelector(".tp-toggle").textContent = open ? "▾" : "▸";
     };
-    photoField(body, getList, setList, { label: "", capture: true });
+    photoField(body, getList, setList, { label: "" });
   }
 
   function printPage() {
