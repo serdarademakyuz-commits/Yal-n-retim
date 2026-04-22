@@ -39,6 +39,9 @@ const Router = (function () {
     consultant:{ title: "Danışmanlık Raporu",       render: (r) => Consultant.render(r) }
   };
 
+  /* Routes that are overview/list pages — no per-tool photo card. */
+  const NO_PHOTOS = new Set(["dashboard","tools","techniques","reports","projects","trends"]);
+
   function go(route) {
     if (!routes[route]) route = "dashboard";
     const root = document.getElementById("app");
@@ -46,6 +49,9 @@ const Router = (function () {
     document.getElementById("pageTitle").textContent = routes[route].title;
     try {
       routes[route].render(root);
+      if (!NO_PHOTOS.has(route) && typeof UI !== "undefined" && UI.toolPhotos) {
+        UI.toolPhotos(root, route);
+      }
     } catch (e) {
       console.error(e);
       root.innerHTML = `<div class="card"><h3>Hata</h3><p>${UI.escape(e.message)}</p></div>`;

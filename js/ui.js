@@ -170,10 +170,42 @@ const UI = (function () {
     `).join("")}</div>`;
   }
 
+  /* Universal per-tool photo gallery. Router calls this after every tool render
+     so each tool gets a "📸 Araç Fotoğrafları" card without touching 28 files.
+     Photos are persisted per-project per-tool in Storage under `<route>_photos`. */
+  function toolPhotos(root, routeKey, label) {
+    if (!root || !routeKey) return;
+    if (root.querySelector(`.tool-photos-card[data-route="${routeKey}"]`)) return;
+    const storageKey = routeKey + "_photos";
+    const card = document.createElement("div");
+    card.className = "card tool-photos-card";
+    card.setAttribute("data-route", routeKey);
+    card.setAttribute("data-no-print", "");
+    card.innerHTML = `
+      <h3 style="display:flex;justify-content:space-between;align-items:center;cursor:pointer">
+        <span>📸 ${label || "Araç Fotoğrafları"}</span>
+        <span class="tp-toggle">▾</span>
+      </h3>
+      <div class="tp-body"></div>
+    `;
+    root.appendChild(card);
+    const body = card.querySelector(".tp-body");
+    const header = card.querySelector("h3");
+    let open = true;
+    const getList = () => (typeof Storage !== "undefined" ? (Storage.getValue(storageKey) || []) : []);
+    const setList = (l) => { if (typeof Storage !== "undefined") Storage.setValue(storageKey, l); };
+    header.onclick = () => {
+      open = !open;
+      body.style.display = open ? "" : "none";
+      card.querySelector(".tp-toggle").textContent = open ? "▾" : "▸";
+    };
+    photoField(body, getList, setList, { label: "", capture: true });
+  }
+
   function printPage() {
     if (typeof window !== "undefined" && window.print) window.print();
   }
 
   return { el, toast, confirm, hero, emptyState, fmtDate, escape, actionButtons,
-           downloadText, toCSV, downloadCSV, photoField, renderPhotos, printPage };
+           downloadText, toCSV, downloadCSV, photoField, renderPhotos, toolPhotos, printPage };
 })();
