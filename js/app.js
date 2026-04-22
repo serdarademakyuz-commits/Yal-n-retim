@@ -138,9 +138,28 @@ const App = { refreshProjectBar: () => Router.refreshProjectBar() };
 
 document.addEventListener("DOMContentLoaded", Router.init);
 
-// Service Worker registration for offline support
+// Service Worker registration with auto-update: new version takes over
+// on the next page load without the user needing to clear cache manually.
 if ("serviceWorker" in navigator) {
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (reloaded) return;
+    reloaded = true;
+    window.location.reload();
+  });
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js").catch(() => { /* offline desteği opsiyoneldir */ });
+    navigator.serviceWorker.register("./sw.js").then(reg => {
+      if (!reg) return;
+      reg.update().catch(() => {});
+      reg.addEventListener("updatefound", () => {
+        const nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener("statechange", () => {
+          if (nw.state === "installed" && navigator.serviceWorker.controller) {
+            nw.postMessage({ type: "SKIP_WAITING" });
+          }
+        });
+      });
+    }).catch(() => { /* offline desteği opsiyoneldir */ });
   });
 }
