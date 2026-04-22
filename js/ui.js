@@ -263,8 +263,9 @@ const UI = (function () {
     card.setAttribute("data-no-print", "");
     const closedPct = records.length > 0 ? Math.round((cntClosed / records.length) * 100) : 0;
     card.innerHTML = `
-      <h4><span>📊 ${opts.title || "Araç Paneli"}</span>
-        <small style="color:var(--muted);font-weight:500">Aktif proje verisi</small>
+      <h4>
+        <span>📊 ${opts.title || "Araç Paneli"}</span>
+        <small style="color:var(--muted);font-weight:500;text-transform:none;letter-spacing:normal">Aktif proje · son 6 ay</small>
       </h4>
       <div class="tmd-stats">
         <div class="tmd-stat"><div class="v">${records.length}</div><div class="l">Toplam</div></div>
@@ -272,10 +273,9 @@ const UI = (function () {
         <div class="tmd-stat"><div class="v">${cntWeek}</div><div class="l">7 gün</div></div>
         <div class="tmd-stat"><div class="v">${closedPct}%</div><div class="l">Kapanan</div></div>
       </div>
-      ${series.length ? `<div style="background:var(--surface);border-radius:6px;padding:6px">
+      ${series.length ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px">
         <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:80px">${bars}</svg>
-        <div style="font-size:10px;color:var(--muted);text-align:right">Son 6 ay kayıt yoğunluğu</div>
-      </div>` : `<div style="background:var(--surface);border-radius:6px;padding:8px;text-align:center;font-size:12px;color:var(--muted)">📭 Henüz kayıt yok — ilk kaydınızı ekleyin.</div>`}
+      </div>` : `<div style="background:var(--surface);border:1px dashed var(--border);border-radius:6px;padding:10px;text-align:center;font-size:12px;color:var(--muted)">📭 Henüz kayıt yok — ilk kaydınızı ekleyin.</div>`}
     `;
     const hero = root.querySelector(".page-hero");
     if (hero && hero.parentNode === root && hero.nextSibling) {

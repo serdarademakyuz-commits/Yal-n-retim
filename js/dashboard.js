@@ -30,11 +30,32 @@ const Dashboard = {
 
   render(root) {
     const kpis = this.collectKPIs();
+    const projName = (typeof Projects !== "undefined" && Projects.getActiveProject) ? Projects.getActiveProject().name : "Genel";
+    const nowStr = new Date().toLocaleDateString("tr-TR", { day: "2-digit", month: "long", year: "numeric" });
     root.innerHTML = `
-      ${UI.hero("📈", "Fabrika Paneli", "Gerçek zamanlı yalın üretim KPI'ları, göstergeler ve grafikler.")}
+      <div class="exec-bar">
+        <div class="exec-bar-left">
+          <div class="exec-label">AKTİF PROJE</div>
+          <div class="exec-project">${UI.escape(projName)}</div>
+        </div>
+        <div class="exec-bar-right">
+          <div class="exec-date">${nowStr}</div>
+          <div class="exec-kpis">
+            <span class="exec-kpi"><span class="dot" style="background:${kpis.oeePct>=85?"var(--success)":kpis.oeePct>=60?"var(--amber)":"var(--danger)"}"></span>OEE <strong>${kpis.oeePct.toFixed(0)}%</strong></span>
+            <span class="exec-kpi"><span class="dot" style="background:${kpis.fivesPct>=80?"var(--success)":kpis.fivesPct>=60?"var(--amber)":"var(--danger)"}"></span>5S <strong>${kpis.fivesPct}%</strong></span>
+            <span class="exec-kpi"><span class="dot" style="background:${kpis.actionsOverdue===0?"var(--success)":"var(--danger)"}"></span>Gecikme <strong>${kpis.actionsOverdue}</strong></span>
+            <span class="exec-kpi"><span class="dot" style="background:${kpis.andonActive===0?"var(--success)":"var(--danger)"}"></span>Andon <strong>${kpis.andonActive}</strong></span>
+          </div>
+        </div>
+      </div>
 
-      <div class="card">
-        <h3>🎯 Ana Göstergeler</h3>
+      ${UI.hero("📊", "Operasyonel Performans Paneli", "Tüm yalın üretim KPI'ları ve göstergeleri — gerçek zamanlı konsolide görünüm.")}
+
+      <div class="dash-section">
+        <div class="section-head">
+          <h3>🎯 Anahtar Performans Göstergeleri</h3>
+          <small>Son kayıt · Hedef karşılaştırması</small>
+        </div>
         <div class="gauge-grid">
           <div class="gauge-cell" id="gauge-oee"></div>
           <div class="gauge-cell" id="gauge-fives"></div>
@@ -43,59 +64,81 @@ const Dashboard = {
         </div>
       </div>
 
-      <div class="grid-2" style="gap:12px">
-        <div class="card">
-          <h3>💰 Kaizen Tasarruf Trendi</h3>
-          <div id="chart-kaizen"></div>
-          <div class="kpi-grid" style="margin-top:8px">
-            <div class="kpi success"><div class="label">Toplam</div><div class="value">${(kpis.kaizenTotal).toLocaleString("tr-TR")}₺</div></div>
-            <div class="kpi amber"><div class="label">Sayı</div><div class="value">${kpis.kaizenCount}</div></div>
+      <div class="dash-section">
+        <div class="section-head">
+          <h3>📈 Finansal ve Operasyonel Sonuçlar</h3>
+          <small>Kaizen tasarrufu · Aksiyon takibi</small>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <h3>💰 Kaizen Tasarruf Trendi</h3>
+            <div id="chart-kaizen"></div>
+            <div class="kpi-grid" style="margin-top:10px">
+              <div class="kpi success"><div class="label">Toplam Tasarruf</div><div class="value">${(kpis.kaizenTotal).toLocaleString("tr-TR")}₺</div><div class="sub">tüm projeler</div></div>
+              <div class="kpi amber"><div class="label">Kaizen Sayısı</div><div class="value">${kpis.kaizenCount}</div><div class="sub">iyileştirme</div></div>
+            </div>
+          </div>
+          <div class="card">
+            <h3>🎯 Aksiyon Durumu</h3>
+            <div id="chart-actions"></div>
+            <div class="kpi-grid" style="margin-top:10px">
+              <div class="kpi success"><div class="label">Tamamlanan</div><div class="value">${kpis.actionsDone}</div><div class="sub">kapatıldı</div></div>
+              <div class="kpi danger"><div class="label">Geciken</div><div class="value">${kpis.actionsOverdue}</div><div class="sub">tarih aşımı</div></div>
+            </div>
           </div>
         </div>
-        <div class="card">
-          <h3>🎯 Aksiyon Durumu</h3>
-          <div id="chart-actions"></div>
-          <div class="kpi-grid" style="margin-top:8px">
-            <div class="kpi success"><div class="label">Tamamlanan</div><div class="value">${kpis.actionsDone}</div></div>
-            <div class="kpi danger"><div class="label">Geciken</div><div class="value">${kpis.actionsOverdue}</div></div>
+      </div>
+
+      <div class="dash-section">
+        <div class="section-head">
+          <h3>🛡️ Risk ve Kalite Göstergeleri</h3>
+          <small>FMEA · Andon · Kontrol</small>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <h3>⚠️ FMEA Risk Dağılımı</h3>
+            <div id="chart-fmea"></div>
+          </div>
+          <div class="card">
+            <h3>🚦 Andon Durumu</h3>
+            <div id="chart-andon"></div>
           </div>
         </div>
       </div>
 
-      <div class="grid-2" style="gap:12px">
-        <div class="card">
-          <h3>⚠️ FMEA Risk Dağılımı</h3>
-          <div id="chart-fmea"></div>
+      <div class="dash-section">
+        <div class="section-head">
+          <h3>📊 Araç Kullanım Analitiği</h3>
+          <small>Son 6 ay · En çok kullanılan 10 araç</small>
         </div>
         <div class="card">
-          <h3>🚦 Andon Durumu</h3>
-          <div id="chart-andon"></div>
+          <div id="chart-usage"></div>
+        </div>
+      </div>
+
+      <div class="dash-section">
+        <div class="section-head">
+          <h3>🧭 Araç Bazlı Performans Panelleri</h3>
+          <small>Her aracın kayıt yoğunluğu ve durumu</small>
+        </div>
+        <div class="card" style="padding:10px">
+          <div id="allToolDashboards" class="all-tool-dashboards"></div>
         </div>
       </div>
 
       <div class="card">
-        <h3>📊 Tüm Araçlar — Kayıt Yoğunluğu</h3>
-        <div id="chart-usage"></div>
-      </div>
-
-      <div class="card">
-        <h3>🧭 Her Aracın Paneli</h3>
-        <div id="allToolDashboards" class="all-tool-dashboards"></div>
-      </div>
-
-      <div class="card">
-        <h3>⚡ Hızlı İşlem</h3>
+        <h3>⚡ Hızlı Erişim</h3>
         <div class="btn-row">
           <button class="btn btn-danger" data-route="andon">🚦 Acil Andon</button>
-          <button class="btn btn-accent" data-route="kaizen">💡 Kaizen Ekle</button>
+          <button class="btn btn-accent" data-route="kaizen">💡 Kaizen</button>
           <button class="btn btn-primary" data-route="gemba">👣 Gemba</button>
           <button class="btn btn-success" data-route="asakai">🌅 Asakai</button>
-          <button class="btn btn-warn" data-route="consultant">📑 Rapor</button>
+          <button class="btn btn-outline" data-route="consultant">📑 Danışmanlık Raporu</button>
         </div>
       </div>
 
       <div class="card">
-        <h3>🧰 Tüm Araçlar</h3>
+        <h3>🧰 Tüm Araçlar (${this.tiles.length})</h3>
         <div class="tile-grid">
           ${this.tiles.map(t => `
             <button class="tile" data-route="${t.r}">
