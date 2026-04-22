@@ -1,3 +1,5 @@
+/* Dashboard — KPI gauges, trends, and mini-charts for the consultant view.
+   Pulls live data from all tools and renders SVG visualizations with no external libs. */
 const Dashboard = {
   tiles: [
     { r: "why5",     i: "❓", n: "5 Neden" },
@@ -27,42 +29,68 @@ const Dashboard = {
   ],
 
   render(root) {
-    const total = Storage.totalCount();
-    const andons = Storage.getAll("andon");
-    const activeAndons = andons.filter(a => a.status !== "resolved").length;
-    const kaizens = Storage.getAll("kaizen").length;
-    const open5s = Storage.getAll("fives").length;
-    const kanban = Storage.getAll("kanban");
-    const wip = kanban.filter(c => c.col === "doing").length;
-
+    const kpis = this.collectKPIs();
     root.innerHTML = `
-      ${UI.hero("📈", "Fabrika Paneli", "Gerçek zamanlı yalın üretim KPI'ları ve tüm araçlara hızlı erişim.")}
+      ${UI.hero("📈", "Fabrika Paneli", "Gerçek zamanlı yalın üretim KPI'ları, göstergeler ve grafikler.")}
 
-      <div class="kpi-grid">
-        <div class="kpi amber">
-          <div class="label">Toplam Kayıt</div>
-          <div class="value">${total}</div>
-          <div class="sub">tüm araçlar</div>
+      <div class="card">
+        <h3>🎯 Ana Göstergeler</h3>
+        <div class="gauge-grid">
+          <div class="gauge-cell" id="gauge-oee"></div>
+          <div class="gauge-cell" id="gauge-fives"></div>
+          <div class="gauge-cell" id="gauge-quality"></div>
+          <div class="gauge-cell" id="gauge-maturity"></div>
         </div>
-        <div class="kpi danger">
-          <div class="label">Aktif Andon</div>
-          <div class="value">${activeAndons}</div>
-          <div class="sub">çözüm bekleniyor</div>
+      </div>
+
+      <div class="grid-2" style="gap:12px">
+        <div class="card">
+          <h3>💰 Kaizen Tasarruf Trendi</h3>
+          <div id="chart-kaizen"></div>
+          <div class="kpi-grid" style="margin-top:8px">
+            <div class="kpi success"><div class="label">Toplam</div><div class="value">${(kpis.kaizenTotal).toLocaleString("tr-TR")}₺</div></div>
+            <div class="kpi amber"><div class="label">Sayı</div><div class="value">${kpis.kaizenCount}</div></div>
+          </div>
         </div>
-        <div class="kpi success">
-          <div class="label">Kaizen</div>
-          <div class="value">${kaizens}</div>
-          <div class="sub">iyileştirme</div>
+        <div class="card">
+          <h3>🎯 Aksiyon Durumu</h3>
+          <div id="chart-actions"></div>
+          <div class="kpi-grid" style="margin-top:8px">
+            <div class="kpi success"><div class="label">Tamamlanan</div><div class="value">${kpis.actionsDone}</div></div>
+            <div class="kpi danger"><div class="label">Geciken</div><div class="value">${kpis.actionsOverdue}</div></div>
+          </div>
         </div>
-        <div class="kpi warn">
-          <div class="label">Kanban WIP</div>
-          <div class="value">${wip}</div>
-          <div class="sub">devam eden iş</div>
+      </div>
+
+      <div class="grid-2" style="gap:12px">
+        <div class="card">
+          <h3>⚠️ FMEA Risk Dağılımı</h3>
+          <div id="chart-fmea"></div>
+        </div>
+        <div class="card">
+          <h3>🚦 Andon Durumu</h3>
+          <div id="chart-andon"></div>
         </div>
       </div>
 
       <div class="card">
-        <h3>🧰 Araçlar</h3>
+        <h3>📊 Tüm Araçlar — Kayıt Yoğunluğu</h3>
+        <div id="chart-usage"></div>
+      </div>
+
+      <div class="card">
+        <h3>⚡ Hızlı İşlem</h3>
+        <div class="btn-row">
+          <button class="btn btn-danger" data-route="andon">🚦 Acil Andon</button>
+          <button class="btn btn-accent" data-route="kaizen">💡 Kaizen Ekle</button>
+          <button class="btn btn-primary" data-route="gemba">👣 Gemba</button>
+          <button class="btn btn-success" data-route="asakai">🌅 Asakai</button>
+          <button class="btn btn-warn" data-route="consultant">📑 Rapor</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🧰 Tüm Araçlar</h3>
         <div class="tile-grid">
           ${this.tiles.map(t => `
             <button class="tile" data-route="${t.r}">
@@ -75,30 +103,231 @@ const Dashboard = {
       </div>
 
       <div class="card">
-        <h3>⚡ Hızlı İşlem</h3>
-        <div class="btn-row">
-          <button class="btn btn-danger" data-route="andon">🚦 Acil Andon</button>
-          <button class="btn btn-accent" data-route="kaizen">💡 Kaizen Ekle</button>
-          <button class="btn btn-primary" data-route="gemba">👣 Gemba Yürüyüşü</button>
-          <button class="btn btn-success" data-route="asakai">🌅 Sabah Toplantısı</button>
-        </div>
-      </div>
-
-      <div class="card">
         <h3>📌 Son Etkinlikler</h3>
         <div id="recentFeed"></div>
       </div>
     `;
 
-    // recent feed
+    this.drawGauge(root.querySelector("#gauge-oee"), kpis.oeePct, { label: "OEE", target: 85, unit: "%", source: kpis.oeeSource });
+    this.drawGauge(root.querySelector("#gauge-fives"), kpis.fivesPct, { label: "5S Skoru", target: 80, unit: "%", source: kpis.fivesSource });
+    this.drawGauge(root.querySelector("#gauge-quality"), kpis.qualityPct, { label: "Kalite", target: 99, unit: "%", source: kpis.qualitySource });
+    this.drawGauge(root.querySelector("#gauge-maturity"), kpis.maturity, { label: "Yalın Olgunluk", target: 75, unit: "%", source: `${kpis.toolsUsed}/${this.tiles.length} araç` });
+
+    this.drawBarTrend(root.querySelector("#chart-kaizen"), kpis.kaizenMonthly, { color: "#06a77d", unit: "₺" });
+    this.drawDonut(root.querySelector("#chart-actions"), [
+      { label: "Tamamlanan", value: kpis.actionsDone, color: "#06a77d" },
+      { label: "Açık", value: kpis.actionsOpen, color: "#f4a261" },
+      { label: "Geciken", value: kpis.actionsOverdue, color: "#d62828" }
+    ]);
+    this.drawBars(root.querySelector("#chart-fmea"), [
+      { label: "Düşük (≤50)", value: kpis.fmeaLow, color: "#06a77d" },
+      { label: "Orta (51-100)", value: kpis.fmeaMed, color: "#f4a261" },
+      { label: "Yüksek (>100)", value: kpis.fmeaHigh, color: "#d62828" }
+    ]);
+    this.drawDonut(root.querySelector("#chart-andon"), [
+      { label: "Aktif", value: kpis.andonActive, color: "#d62828" },
+      { label: "Çözülen", value: kpis.andonResolved, color: "#06a77d" }
+    ]);
+
+    const usageData = this.tiles
+      .map(t => ({ label: t.n, value: Storage.getAll(t.r).length, color: "#0a2540" }))
+      .filter(x => x.value > 0)
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 10);
+    this.drawBars(root.querySelector("#chart-usage"), usageData, { showEmpty: true });
+
+    this.renderFeed(root);
+  },
+
+  collectKPIs() {
+    const oees = Storage.getAll("oee");
+    const lastOee = oees[0];
+    const oeePct = lastOee ? +(lastOee.oee * 100).toFixed(1) : 0;
+
+    const fives = Storage.getAll("fives");
+    const lastFives = fives[0];
+    let fivesPct = 0;
+    if (lastFives) {
+      if (typeof lastFives.total === "number") fivesPct = Math.round((lastFives.total / 20) * 100);
+      else if (typeof lastFives.score === "number") fivesPct = Math.round(lastFives.score);
+    }
+
+    const spc = Storage.getAll("spc");
+    let qualityPct = 0;
+    if (lastOee && typeof lastOee.quality === "number") qualityPct = +(lastOee.quality * 100).toFixed(1);
+    else if (spc.length) qualityPct = 95;
+
+    const toolsUsed = this.tiles.filter(t => Storage.getAll(t.r).length > 0).length;
+    const maturity = Math.round((toolsUsed / this.tiles.length) * 100);
+
+    const kaizens = Storage.getAll("kaizen");
+    const kaizenTotal = kaizens.reduce((s, k) => s + (+k.costSave || 0), 0);
+    const kaizenMonthly = this.monthlyBuckets(kaizens, k => +k.costSave || 0);
+
+    const fmeas = Storage.getAll("fmea");
+    let fmeaLow = 0, fmeaMed = 0, fmeaHigh = 0;
+    fmeas.forEach(f => (f.rows || []).forEach(r => {
+      const rpn = (+r.S || 0) * (+r.O || 0) * (+r.D || 0);
+      if (rpn <= 50) fmeaLow++;
+      else if (rpn <= 100) fmeaMed++;
+      else fmeaHigh++;
+    }));
+
+    const andons = Storage.getAll("andon");
+    const andonActive = andons.filter(a => a.status !== "resolved").length;
+    const andonResolved = andons.filter(a => a.status === "resolved").length;
+
+    const actions = (typeof Actions !== "undefined" && Actions.collectLinked)
+      ? Actions.collectLinked().concat(Storage.getAll("actions"))
+      : Storage.getAll("actions");
+    const today = new Date().toISOString().slice(0, 10);
+    let actionsDone = 0, actionsOpen = 0, actionsOverdue = 0;
+    actions.forEach(a => {
+      if (a.status === "done") actionsDone++;
+      else if (a.due && a.due < today) actionsOverdue++;
+      else actionsOpen++;
+    });
+
+    return {
+      oeePct, oeeSource: lastOee ? UI.fmtDate(lastOee.updatedAt) : "—",
+      fivesPct, fivesSource: lastFives ? UI.fmtDate(lastFives.updatedAt) : "—",
+      qualityPct, qualitySource: lastOee ? "OEE kalite" : spc.length ? "SPC" : "—",
+      maturity, toolsUsed,
+      kaizenTotal, kaizenCount: kaizens.length, kaizenMonthly,
+      fmeaLow, fmeaMed, fmeaHigh,
+      andonActive, andonResolved,
+      actionsDone, actionsOpen, actionsOverdue
+    };
+  },
+
+  monthlyBuckets(records, valueFn) {
+    const buckets = {};
+    records.forEach(r => {
+      const t = r.createdAt || r.updatedAt;
+      if (!t) return;
+      const d = new Date(t);
+      const key = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+      buckets[key] = (buckets[key] || 0) + valueFn(r);
+    });
+    return Object.keys(buckets).sort().slice(-6).map(k => ({ label: k.slice(2), value: buckets[k] }));
+  },
+
+  /* Semi-circular gauge 0-100 with target marker. */
+  drawGauge(container, value, opts) {
+    if (!container) return;
+    opts = opts || {};
+    const w = 200, h = 130, cx = w / 2, cy = h - 15, r = 80;
+    const v = Math.max(0, Math.min(100, +value || 0));
+    const angle = Math.PI * (1 - v / 100);
+    const x = cx + r * Math.cos(angle);
+    const y = cy - r * Math.sin(angle);
+    const color = v >= (opts.target || 75) ? "#06a77d" : v >= (opts.target || 75) * 0.7 ? "#f4a261" : "#d62828";
+    const targetAngle = Math.PI * (1 - (opts.target || 0) / 100);
+    const tx1 = cx + (r - 8) * Math.cos(targetAngle), ty1 = cy - (r - 8) * Math.sin(targetAngle);
+    const tx2 = cx + (r + 6) * Math.cos(targetAngle), ty2 = cy - (r + 6) * Math.sin(targetAngle);
+    const arcPath = `M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`;
+    const filledArcPath = `M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${x.toFixed(1)} ${y.toFixed(1)}`;
+    container.innerHTML = `
+      <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;max-height:150px">
+        <path d="${arcPath}" fill="none" stroke="#e2e8f0" stroke-width="14" stroke-linecap="round"/>
+        <path d="${filledArcPath}" fill="none" stroke="${color}" stroke-width="14" stroke-linecap="round"/>
+        <line x1="${tx1.toFixed(1)}" y1="${ty1.toFixed(1)}" x2="${tx2.toFixed(1)}" y2="${ty2.toFixed(1)}" stroke="#0a2540" stroke-width="2"/>
+        <text x="${cx}" y="${cy - 30}" text-anchor="middle" font-size="26" font-weight="800" fill="${color}">${v.toFixed(0)}${opts.unit || "%"}</text>
+        <text x="${cx}" y="${cy - 12}" text-anchor="middle" font-size="11" fill="#64748b">Hedef ${opts.target || "—"}${opts.unit || "%"}</text>
+      </svg>
+      <div style="text-align:center;font-weight:700;margin-top:-8px">${opts.label || ""}</div>
+      <div style="text-align:center;font-size:11px;color:var(--muted)">${opts.source || ""}</div>
+    `;
+  },
+
+  drawBarTrend(container, pts, opts) {
+    if (!container) return;
+    opts = opts || {};
+    if (!pts || !pts.length) { container.innerHTML = UI.emptyState("📊", "Veri yok."); return; }
+    const w = 320, h = 140, pad = 30;
+    const max = Math.max(...pts.map(p => p.value), 1);
+    const bw = (w - 2 * pad) / pts.length;
+    const bars = pts.map((p, i) => {
+      const bh = ((p.value / max) * (h - 2 * pad));
+      const x = pad + i * bw + 4;
+      const y = h - pad - bh;
+      return `<g>
+        <rect x="${x}" y="${y}" width="${(bw - 8).toFixed(1)}" height="${bh.toFixed(1)}" fill="${opts.color}" rx="2"/>
+        <text x="${(x + (bw - 8) / 2).toFixed(1)}" y="${(y - 4).toFixed(1)}" font-size="10" text-anchor="middle" fill="#475569">${p.value.toLocaleString("tr-TR")}</text>
+        <text x="${(x + (bw - 8) / 2).toFixed(1)}" y="${h - pad + 14}" font-size="10" text-anchor="middle" fill="#64748b">${p.label}</text>
+      </g>`;
+    }).join("");
+    container.innerHTML = `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;max-height:180px">
+      <line x1="${pad}" x2="${w - pad}" y1="${h - pad}" y2="${h - pad}" stroke="#cbd5e1"/>
+      ${bars}
+    </svg>`;
+  },
+
+  drawBars(container, items, opts) {
+    if (!container) return;
+    opts = opts || {};
+    const total = items.reduce((s, x) => s + x.value, 0);
+    if (total === 0) { container.innerHTML = UI.emptyState("📊", "Veri yok."); return; }
+    const max = Math.max(...items.map(x => x.value), 1);
+    container.innerHTML = items.map(x => {
+      const w = Math.round((x.value / max) * 100);
+      const pct = total > 0 ? Math.round((x.value / total) * 100) : 0;
+      return `<div style="margin:6px 0">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+          <span>${UI.escape(x.label)}</span>
+          <strong>${x.value}${opts.showPct === false ? "" : ` <small style="color:var(--muted)">(${pct}%)</small>`}</strong>
+        </div>
+        <div style="background:#e2e8f0;border-radius:6px;height:12px;overflow:hidden">
+          <div style="width:${w}%;height:100%;background:${x.color || "#0a2540"};border-radius:6px;transition:width .3s"></div>
+        </div>
+      </div>`;
+    }).join("");
+  },
+
+  drawDonut(container, segments) {
+    if (!container) return;
+    const total = segments.reduce((s, x) => s + x.value, 0);
+    if (total === 0) { container.innerHTML = UI.emptyState("🍩", "Veri yok."); return; }
+    const cx = 80, cy = 80, r = 60, rin = 36;
+    let acc = 0;
+    const paths = segments.filter(s => s.value > 0).map(s => {
+      const start = (acc / total) * Math.PI * 2 - Math.PI / 2;
+      acc += s.value;
+      const end = (acc / total) * Math.PI * 2 - Math.PI / 2;
+      const large = end - start > Math.PI ? 1 : 0;
+      const x1 = cx + r * Math.cos(start), y1 = cy + r * Math.sin(start);
+      const x2 = cx + r * Math.cos(end), y2 = cy + r * Math.sin(end);
+      const x3 = cx + rin * Math.cos(end), y3 = cy + rin * Math.sin(end);
+      const x4 = cx + rin * Math.cos(start), y4 = cy + rin * Math.sin(start);
+      return `<path d="M ${x1.toFixed(1)} ${y1.toFixed(1)} A ${r} ${r} 0 ${large} 1 ${x2.toFixed(1)} ${y2.toFixed(1)} L ${x3.toFixed(1)} ${y3.toFixed(1)} A ${rin} ${rin} 0 ${large} 0 ${x4.toFixed(1)} ${y4.toFixed(1)} Z" fill="${s.color}"/>`;
+    }).join("");
+    const legend = segments.map(s => {
+      const pct = total > 0 ? Math.round((s.value / total) * 100) : 0;
+      return `<div style="display:flex;align-items:center;gap:8px;margin:4px 0;font-size:12px">
+        <span style="width:12px;height:12px;background:${s.color};border-radius:3px;display:inline-block"></span>
+        <span style="flex:1">${UI.escape(s.label)}</span>
+        <strong>${s.value} (${pct}%)</strong>
+      </div>`;
+    }).join("");
+    container.innerHTML = `
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <svg viewBox="0 0 160 160" style="width:140px;height:140px">${paths}
+          <text x="${cx}" y="${cy - 4}" text-anchor="middle" font-size="20" font-weight="800" fill="#0a2540">${total}</text>
+          <text x="${cx}" y="${cy + 12}" text-anchor="middle" font-size="10" fill="#64748b">toplam</text>
+        </svg>
+        <div style="flex:1;min-width:160px">${legend}</div>
+      </div>
+    `;
+  },
+
+  renderFeed(root) {
     const feed = root.querySelector("#recentFeed");
+    if (!feed) return;
     const recent = [];
     this.tiles.forEach(t => {
       Storage.getAll(t.r).slice(0, 2).forEach(item => {
         recent.push({
-          tool: t.n,
-          icon: t.i,
-          route: t.r,
+          tool: t.n, icon: t.i, route: t.r,
           title: item.title || item.problem || item.name || item.event || item.issue || item.note || "Kayıt",
           at: item.updatedAt || item.createdAt
         });

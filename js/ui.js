@@ -219,6 +219,75 @@ const UI = (function () {
     if (typeof window !== "undefined" && window.print) window.print();
   }
 
+  /* Per-tool mini dashboard injected above every tool page: total records,
+     this month, last 7 days, active share + monthly trend bar chart. */
+  function toolDashboard(root, routeKey, opts) {
+    if (!root || !routeKey) return;
+    if (root.querySelector(`.tool-mini-dash[data-tmd="${routeKey}"]`)) return;
+    opts = opts || {};
+    if (typeof Storage === "undefined") return;
+    const records = Storage.getAll(routeKey) || [];
+    const now = new Date();
+    const thisMonth = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000).toISOString();
+    let cntMonth = 0, cntWeek = 0, cntClosed = 0;
+    const buckets = {};
+    records.forEach(r => {
+      const t = r.createdAt || r.updatedAt || "";
+      if (t) {
+        const d = new Date(t);
+        const mk = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+        if (mk === thisMonth) cntMonth++;
+        if (t >= sevenDaysAgo) cntWeek++;
+        buckets[mk] = (buckets[mk] || 0) + 1;
+      }
+      if (r.status === "done" || r.status === "resolved" || r.status === "closed") cntClosed++;
+    });
+    const series = Object.keys(buckets).sort().slice(-6).map(k => ({ label: k.slice(2), value: buckets[k] }));
+    const max = Math.max(1, ...series.map(s => s.value));
+    const w = 300, h = 70, pad = 20;
+    const bw = (w - 2 * pad) / Math.max(series.length, 1);
+    const bars = series.map((p, i) => {
+      const bh = Math.round((p.value / max) * (h - 2 * pad));
+      const x = pad + i * bw + 3;
+      const y = h - pad - bh;
+      return `<g>
+        <rect x="${x}" y="${y}" width="${(bw - 6).toFixed(1)}" height="${bh}" fill="#0a2540" rx="2"/>
+        <text x="${(x + (bw - 6) / 2).toFixed(1)}" y="${h - pad + 12}" font-size="8" text-anchor="middle" fill="#64748b">${p.label}</text>
+        <text x="${(x + (bw - 6) / 2).toFixed(1)}" y="${Math.max(y - 2, 10)}" font-size="8" text-anchor="middle" fill="#475569">${p.value}</text>
+      </g>`;
+    }).join("");
+    const card = document.createElement("div");
+    card.className = "tool-mini-dash";
+    card.setAttribute("data-tmd", routeKey);
+    card.setAttribute("data-no-print", "");
+    const closedPct = records.length > 0 ? Math.round((cntClosed / records.length) * 100) : 0;
+    card.innerHTML = `
+      <h4><span>📊 ${opts.title || "Araç Paneli"}</span>
+        <small style="color:var(--muted);font-weight:500">Aktif proje verisi</small>
+      </h4>
+      <div class="tmd-stats">
+        <div class="tmd-stat"><div class="v">${records.length}</div><div class="l">Toplam</div></div>
+        <div class="tmd-stat"><div class="v">${cntMonth}</div><div class="l">Bu ay</div></div>
+        <div class="tmd-stat"><div class="v">${cntWeek}</div><div class="l">7 gün</div></div>
+        <div class="tmd-stat"><div class="v">${closedPct}%</div><div class="l">Kapanan</div></div>
+      </div>
+      ${series.length ? `<div style="background:var(--surface);border-radius:6px;padding:6px">
+        <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:80px">${bars}</svg>
+        <div style="font-size:10px;color:var(--muted);text-align:right">Son 6 ay kayıt yoğunluğu</div>
+      </div>` : `<div style="background:var(--surface);border-radius:6px;padding:8px;text-align:center;font-size:12px;color:var(--muted)">📭 Henüz kayıt yok — ilk kaydınızı ekleyin.</div>`}
+    `;
+    const hero = root.querySelector(".page-hero");
+    if (hero && hero.parentNode === root && hero.nextSibling) {
+      root.insertBefore(card, hero.nextSibling);
+    } else if (hero && hero.parentNode === root) {
+      root.appendChild(card);
+    } else {
+      root.insertBefore(card, root.firstChild);
+    }
+  }
+
   return { el, toast, confirm, hero, emptyState, fmtDate, escape, actionButtons,
-           downloadText, toCSV, downloadCSV, photoField, renderPhotos, toolPhotos, printPage };
+           downloadText, toCSV, downloadCSV, photoField, renderPhotos,
+           toolPhotos, toolDashboard, printPage };
 })();

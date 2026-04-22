@@ -49,6 +49,9 @@ const Router = (function () {
     document.getElementById("pageTitle").textContent = routes[route].title;
     try {
       routes[route].render(root);
+      if (!NO_PHOTOS.has(route) && typeof UI !== "undefined" && UI.toolDashboard) {
+        UI.toolDashboard(root, route, { title: routes[route].title });
+      }
       if (!NO_PHOTOS.has(route) && typeof UI !== "undefined" && UI.toolPhotos) {
         UI.toolPhotos(root, route);
       }
