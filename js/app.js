@@ -92,6 +92,20 @@ const Router = (function () {
     document.getElementById("navBackdrop").onclick = closeNav;
     document.getElementById("homeBtn").onclick = () => go("dashboard");
 
+    const applyTheme = (t) => {
+      document.documentElement.setAttribute("data-theme", t);
+      const btn = document.getElementById("themeBtn");
+      if (btn) btn.textContent = t === "dark" ? "☀️" : "🌙";
+    };
+    const saved = (typeof localStorage !== "undefined" && localStorage.getItem("yalin_theme")) || "light";
+    applyTheme(saved);
+    const themeBtn = document.getElementById("themeBtn");
+    if (themeBtn) themeBtn.onclick = () => {
+      const cur = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      applyTheme(cur);
+      try { localStorage.setItem("yalin_theme", cur); } catch (e) {}
+    };
+
     const sel = document.getElementById("projectSelect");
     if (sel) {
       refreshProjectBar();

@@ -9,6 +9,14 @@
   <title>Yalın Üretim | Fabrika Mobil Uygulaması</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="css/styles.css" />
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("yalin_theme") || "light";
+        document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body>
   <header class="app-header">
@@ -20,6 +28,7 @@
         <span id="pageTitle">Fabrika Operasyon Paneli</span>
       </div>
     </div>
+    <button class="icon-btn" id="themeBtn" aria-label="Gece / Gündüz">🌙</button>
     <button class="icon-btn" id="homeBtn" aria-label="Ana Sayfa">🏠</button>
   </header>
 
