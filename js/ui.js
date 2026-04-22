@@ -128,7 +128,12 @@ const UI = (function () {
       const list = getList() || [];
       container.innerHTML = `
         ${label ? `<label>${label}</label>` : ""}
-        <input type="file" accept="image/*" multiple class="photo-input" ${opts.capture ? 'capture="environment"' : ""}>
+        <div class="photo-actions" style="display:flex;gap:8px;flex-wrap:wrap">
+          <button type="button" class="btn btn-primary photo-pick-file">📁 Dosya / Galeri</button>
+          <button type="button" class="btn btn-accent photo-pick-cam">📷 Kamera</button>
+        </div>
+        <input type="file" accept="image/*" multiple class="photo-input" style="display:none">
+        <input type="file" accept="image/*" capture="environment" class="photo-input-cam" style="display:none">
         <div class="photo-grid">
           ${list.map((src, i) => `
             <div class="photo-thumb">
@@ -138,7 +143,9 @@ const UI = (function () {
           `).join("")}
         </div>
       `;
-      container.querySelector(".photo-input").onchange = async (e) => {
+      const fileInput = container.querySelector(".photo-input");
+      const camInput = container.querySelector(".photo-input-cam");
+      const handle = async (e) => {
         const files = Array.from(e.target.files || []);
         if (!files.length) return;
         const current = getList() || [];
@@ -149,9 +156,15 @@ const UI = (function () {
           } catch (err) { toast("Fotoğraf okunamadı", "danger"); }
         }
         setList(current);
+        e.target.value = "";
         render();
       };
-      container.querySelectorAll(".photo-del").forEach(b => b.onclick = () => {
+      fileInput.onchange = handle;
+      camInput.onchange = handle;
+      container.querySelector(".photo-pick-file").onclick = (e) => { e.stopPropagation(); fileInput.click(); };
+      container.querySelector(".photo-pick-cam").onclick = (e) => { e.stopPropagation(); camInput.click(); };
+      container.querySelectorAll(".photo-del").forEach(b => b.onclick = (e) => {
+        e.stopPropagation();
         const i = +b.dataset.i;
         const cur = getList() || [];
         cur.splice(i, 1);
