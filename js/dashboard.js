@@ -32,24 +32,51 @@ const Dashboard = {
     const kpis = this.collectKPIs();
     const projName = (typeof Projects !== "undefined" && Projects.getActiveProject) ? Projects.getActiveProject().name : "Genel";
     const nowStr = new Date().toLocaleDateString("tr-TR", { day: "2-digit", month: "long", year: "numeric" });
+    const sqdcp = this.sqdcpStatus(kpis);
+    const execSummary = this.generateExecSummary(kpis);
+    const topRisks = this.topFmeaRisks(5);
+    const topWins = this.topKaizens(5);
+    const priorityActions = this.priorityActions(5);
+
     root.innerHTML = `
       <div class="exec-bar">
         <div class="exec-bar-left">
           <div class="exec-label">AKTİF PROJE</div>
           <div class="exec-project">${UI.escape(projName)}</div>
+          <div class="exec-sub">${nowStr} · Yönetici Kokpiti</div>
         </div>
         <div class="exec-bar-right">
-          <div class="exec-date">${nowStr}</div>
           <div class="exec-kpis">
-            <span class="exec-kpi"><span class="dot" style="background:${kpis.oeePct>=85?"var(--success)":kpis.oeePct>=60?"var(--amber)":"var(--danger)"}"></span>OEE <strong>${kpis.oeePct.toFixed(0)}%</strong></span>
-            <span class="exec-kpi"><span class="dot" style="background:${kpis.fivesPct>=80?"var(--success)":kpis.fivesPct>=60?"var(--amber)":"var(--danger)"}"></span>5S <strong>${kpis.fivesPct}%</strong></span>
+            <span class="exec-kpi"><span class="dot" style="background:${this.kpiColor(kpis.oeePct, 85)}"></span>OEE <strong>${kpis.oeePct.toFixed(0)}%</strong></span>
+            <span class="exec-kpi"><span class="dot" style="background:${this.kpiColor(kpis.fivesPct, 80)}"></span>5S <strong>${kpis.fivesPct}%</strong></span>
             <span class="exec-kpi"><span class="dot" style="background:${kpis.actionsOverdue===0?"var(--success)":"var(--danger)"}"></span>Gecikme <strong>${kpis.actionsOverdue}</strong></span>
             <span class="exec-kpi"><span class="dot" style="background:${kpis.andonActive===0?"var(--success)":"var(--danger)"}"></span>Andon <strong>${kpis.andonActive}</strong></span>
           </div>
+          <button class="btn btn-outline btn-sm" id="printExec" data-no-print>🖨️ Executive Memo</button>
         </div>
       </div>
 
-      ${UI.hero("📊", "Operasyonel Performans Paneli", "Tüm yalın üretim KPI'ları ve göstergeleri — gerçek zamanlı konsolide görünüm.")}
+      <div class="card exec-memo" id="execMemo">
+        <div class="exec-memo-head">
+          <h3>📝 Yönetici Özeti</h3>
+          <span class="exec-stamp">${nowStr}</span>
+        </div>
+        <p>${execSummary}</p>
+      </div>
+
+      <div class="card sqdcp-strip">
+        <h3>🏭 SQDCP Stratejik Pusula</h3>
+        <div class="sqdcp-grid">
+          ${sqdcp.map(p => `
+            <div class="sqdcp-cell sqdcp-${p.state}">
+              <div class="sq-ico">${p.icon}</div>
+              <div class="sq-label">${p.label}</div>
+              <div class="sq-val">${p.value}</div>
+              <div class="sq-note">${p.note}</div>
+            </div>
+          `).join("")}
+        </div>
+      </div>
 
       <div class="dash-section">
         <div class="section-head">
@@ -102,6 +129,54 @@ const Dashboard = {
           <div class="card">
             <h3>🚦 Andon Durumu</h3>
             <div id="chart-andon"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash-section">
+        <div class="section-head">
+          <h3>🔥 Yönetici Odak Listesi</h3>
+          <small>En kritik riskler · Kazanımlar · Öncelikli aksiyonlar</small>
+        </div>
+        <div class="grid-3-sm">
+          <div class="card focus-card danger-accent">
+            <h3>🚨 En Yüksek Riskler (FMEA)</h3>
+            ${topRisks.length ? topRisks.map((r, i) => `
+              <div class="focus-item">
+                <span class="focus-rank">${i+1}</span>
+                <div class="focus-main">
+                  <div class="focus-title">${UI.escape(r.failureMode)}</div>
+                  <div class="focus-sub">${UI.escape(r.process)} · S:${r.S} O:${r.O} D:${r.D}</div>
+                </div>
+                <span class="focus-metric danger">${r.rpn}</span>
+              </div>
+            `).join("") : `<div class="focus-empty">FMEA verisi yok</div>`}
+          </div>
+          <div class="card focus-card success-accent">
+            <h3>💎 En Büyük Kaizen Kazanımları</h3>
+            ${topWins.length ? topWins.map((k, i) => `
+              <div class="focus-item">
+                <span class="focus-rank">${i+1}</span>
+                <div class="focus-main">
+                  <div class="focus-title">${UI.escape(k.title || k.problem || "Kaizen")}</div>
+                  <div class="focus-sub">${UI.escape(k.area || "")}</div>
+                </div>
+                <span class="focus-metric success">${(+k.costSave || 0).toLocaleString("tr-TR")}₺</span>
+              </div>
+            `).join("") : `<div class="focus-empty">Kaizen kaydı yok</div>`}
+          </div>
+          <div class="card focus-card warn-accent">
+            <h3>⏰ Öncelikli Aksiyonlar</h3>
+            ${priorityActions.length ? priorityActions.map((a, i) => `
+              <div class="focus-item">
+                <span class="focus-rank">${i+1}</span>
+                <div class="focus-main">
+                  <div class="focus-title">${UI.escape(a.title || a.what || "Aksiyon")}</div>
+                  <div class="focus-sub">${UI.escape(a.owner || "")} · ${UI.escape(a.due || "")}</div>
+                </div>
+                <span class="focus-metric ${a.overdue ? 'danger' : 'warn'}">${a.overdue ? '⏱️ Gecikmiş' : 'Açık'}</span>
+              </div>
+            `).join("") : `<div class="focus-empty">Açık aksiyon yok</div>`}
           </div>
         </div>
       </div>
@@ -186,6 +261,113 @@ const Dashboard = {
 
     this.renderAllToolDashboards(root);
     this.renderFeed(root);
+
+    const printBtn = root.querySelector("#printExec");
+    if (printBtn) printBtn.onclick = () => UI.printPage();
+  },
+
+  kpiColor(value, target) {
+    if (value >= target) return "var(--success)";
+    if (value >= target * 0.7) return "var(--amber)";
+    return "var(--danger)";
+  },
+
+  sqdcpStatus(kpis) {
+    const andonCount = kpis.andonActive;
+    const fmeaCrit = kpis.fmeaHigh;
+    const oee = kpis.oeePct;
+    const overdue = kpis.actionsOverdue;
+    const done = kpis.actionsDone;
+    const state = (ok, warn) => ok ? "ok" : warn ? "warn" : "risk";
+    const fives = kpis.fivesPct;
+
+    return [
+      { icon: "🦺", label: "Safety (S)", value: andonCount === 0 ? "✓ Temiz" : `${andonCount} Aktif`,
+        note: andonCount === 0 ? "Açık güvenlik olayı yok" : "Derhal müdahale",
+        state: state(andonCount === 0, andonCount <= 2) },
+      { icon: "🎯", label: "Quality (Q)", value: `${fmeaCrit} Risk`,
+        note: fmeaCrit === 0 ? "Kritik risk yok" : "FMEA'da yüksek RPN",
+        state: state(fmeaCrit === 0, fmeaCrit <= 3) },
+      { icon: "🚚", label: "Delivery (D)", value: overdue === 0 ? "✓ Zamanında" : `${overdue} Gecikmiş`,
+        note: overdue === 0 ? "Aksiyon gecikmesi yok" : "Takvim ihlali",
+        state: state(overdue === 0, overdue <= 2) },
+      { icon: "💰", label: "Cost (C)", value: kpis.kaizenTotal.toLocaleString("tr-TR") + "₺",
+        note: `${kpis.kaizenCount} kaizen · yıllık tasarruf`,
+        state: kpis.kaizenCount > 0 ? "ok" : "warn" },
+      { icon: "👥", label: "People (P)", value: `${fives}%`,
+        note: `5S · ${done} aksiyon kapandı`,
+        state: state(fives >= 80, fives >= 60) }
+    ];
+  },
+
+  generateExecSummary(kpis) {
+    const parts = [];
+    const oeeTxt = kpis.oeePct >= 85 ? `<strong style="color:var(--success)">dünya klası seviyede (${kpis.oeePct.toFixed(0)}%)</strong>`
+                 : kpis.oeePct >= 60 ? `<strong style="color:var(--amber)">sektör ortalamasında (${kpis.oeePct.toFixed(0)}%)</strong>`
+                 : `<strong style="color:var(--danger)">hedefin altında (${kpis.oeePct.toFixed(0)}%)</strong>`;
+    parts.push(`OEE ${oeeTxt}.`);
+
+    if (kpis.kaizenCount > 0) {
+      parts.push(`Aktif kaizen portföyünden yıllık <strong>${kpis.kaizenTotal.toLocaleString("tr-TR")}₺</strong> tasarruf sağlandı (${kpis.kaizenCount} iyileştirme).`);
+    } else {
+      parts.push(`Henüz kaizen kaydı yok — sürekli iyileştirme döngüsü başlatılmalı.`);
+    }
+
+    if (kpis.fmeaHigh > 0) {
+      parts.push(`<strong style="color:var(--danger)">${kpis.fmeaHigh} yüksek riskli hata modu</strong> acil aksiyon bekliyor.`);
+    } else if (kpis.fmeaMed > 0) {
+      parts.push(`${kpis.fmeaMed} orta seviye risk izleniyor.`);
+    }
+
+    if (kpis.actionsOverdue > 0) {
+      parts.push(`<strong style="color:var(--danger)">${kpis.actionsOverdue} aksiyon tarih aşımında</strong> — sorumluları gündeme al.`);
+    } else if (kpis.actionsOpen > 0) {
+      parts.push(`${kpis.actionsOpen} açık aksiyon plan dahilinde ilerliyor.`);
+    }
+
+    if (kpis.andonActive > 0) {
+      parts.push(`<strong style="color:var(--danger)">${kpis.andonActive} aktif Andon sinyali</strong> — saha müdahalesi gerekli.`);
+    }
+
+    const maturity = kpis.maturity;
+    if (maturity >= 75) parts.push(`Yalın olgunluk <strong style="color:var(--success)">${maturity}%</strong> — araçların çoğu aktif.`);
+    else if (maturity >= 40) parts.push(`Yalın olgunluk <strong style="color:var(--amber)">${maturity}%</strong> — araç kapsamı genişletilmeli.`);
+    else parts.push(`Yalın olgunluk <strong style="color:var(--danger)">${maturity}%</strong> — yalın dönüşüm başlangıç aşamasında.`);
+
+    return parts.join(" ");
+  },
+
+  topFmeaRisks(n) {
+    const out = [];
+    Storage.getAll("fmea").forEach(f => {
+      (f.rows || []).forEach(r => {
+        const rpn = (+r.S || 0) * (+r.O || 0) * (+r.D || 0);
+        if (rpn > 0) out.push({ failureMode: r.failureMode || "—", process: r.process || f.title || "—", S: +r.S || 0, O: +r.O || 0, D: +r.D || 0, rpn });
+      });
+    });
+    return out.sort((a, b) => b.rpn - a.rpn).slice(0, n);
+  },
+
+  topKaizens(n) {
+    return Storage.getAll("kaizen")
+      .filter(k => +k.costSave > 0)
+      .sort((a, b) => (+b.costSave || 0) - (+a.costSave || 0))
+      .slice(0, n);
+  },
+
+  priorityActions(n) {
+    const today = new Date().toISOString().slice(0, 10);
+    const actions = (typeof Actions !== "undefined" && Actions.collectLinked)
+      ? Actions.collectLinked().concat(Storage.getAll("actions"))
+      : Storage.getAll("actions");
+    return actions
+      .filter(a => a.status !== "done")
+      .map(a => ({ ...a, overdue: a.due && a.due < today }))
+      .sort((a, b) => {
+        if (a.overdue !== b.overdue) return a.overdue ? -1 : 1;
+        return (a.due || "").localeCompare(b.due || "");
+      })
+      .slice(0, n);
   },
 
   renderAllToolDashboards(root) {
