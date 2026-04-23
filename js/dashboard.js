@@ -65,16 +65,47 @@ const Dashboard = {
       </div>
 
       <div class="card sqdcp-strip">
-        <h3>🏭 SQDCP Stratejik Pusula</h3>
+        <div class="sqdcp-head">
+          <h3>🏭 SQDCP Stratejik Pusula</h3>
+          <div class="sqdcp-legend">
+            <span><span class="lg-dot" style="background:var(--success)"></span>Hedefte</span>
+            <span><span class="lg-dot" style="background:var(--amber)"></span>İzleniyor</span>
+            <span><span class="lg-dot" style="background:var(--danger)"></span>Risk</span>
+          </div>
+        </div>
         <div class="sqdcp-grid">
-          ${sqdcp.map(p => `
-            <div class="sqdcp-cell sqdcp-${p.state}">
-              <div class="sq-ico">${p.icon}</div>
-              <div class="sq-label">${p.label}</div>
-              <div class="sq-val">${p.value}</div>
-              <div class="sq-note">${p.note}</div>
-            </div>
-          `).join("")}
+          ${sqdcp.map(p => {
+            const arrow = p.trend === "up" ? "▲" : p.trend === "down" ? "▼" : "▬";
+            const trendClass = p.state === "risk"
+              ? (p.trend === "down" ? "good" : "bad")
+              : p.trend === "up" ? "good" : p.trend === "down" ? "bad" : "flat";
+            const targetLabel = p.target != null ? `Hedef: ${p.target}${p.unit || ""}` : "";
+            const pctToTarget = p.target != null && p.target !== 0
+              ? Math.min(100, Math.max(0, Math.round((p.value / p.target) * 100)))
+              : null;
+            return `
+              <div class="sqdcp-cell sqdcp-${p.state}" data-route="${p.key === 'safety' ? 'andon' : p.key === 'quality' ? 'fmea' : p.key === 'delivery' ? 'actions' : p.key === 'cost' ? 'kaizen' : 'fives'}">
+                <div class="sq-top">
+                  <div class="sq-light sqdcp-light-${p.state}"></div>
+                  <div class="sq-letter">${p.label.charAt(0)}</div>
+                  <div class="sq-title">
+                    <div class="sq-label">${p.icon} ${p.label}</div>
+                    <div class="sq-sub">${p.note}</div>
+                  </div>
+                </div>
+                <div class="sq-metric">
+                  <span class="sq-val">${typeof p.value === "number" ? p.value.toLocaleString("tr-TR") : p.value}</span>
+                  <span class="sq-unit">${p.unit || ""}</span>
+                  <span class="sq-trend sq-trend-${trendClass}">${arrow}</span>
+                </div>
+                ${targetLabel ? `<div class="sq-target">
+                  <small>${targetLabel}</small>
+                  ${pctToTarget != null ? `<div class="sq-bar"><div class="sq-bar-fill sqdcp-fill-${p.state}" style="width:${pctToTarget}%"></div></div>` : ""}
+                </div>` : ""}
+                <div class="sq-detail">${p.detail}</div>
+              </div>
+            `;
+          }).join("")}
         </div>
       </div>
 
@@ -273,30 +304,74 @@ const Dashboard = {
   },
 
   sqdcpStatus(kpis) {
-    const andonCount = kpis.andonActive;
-    const fmeaCrit = kpis.fmeaHigh;
-    const oee = kpis.oeePct;
-    const overdue = kpis.actionsOverdue;
-    const done = kpis.actionsDone;
-    const state = (ok, warn) => ok ? "ok" : warn ? "warn" : "risk";
-    const fives = kpis.fivesPct;
+    const cutoff = new Date(Date.now() - 30 * 86400000);
+    const andonRecs = Storage.getAll("andon");
+    const lastSafetyIncident = andonRecs
+      .filter(a => (a.type || "").toLowerCase().includes("güv") || (a.type || "").toLowerCase().includes("safe"))
+      .map(a => new Date(a.createdAt || a.updatedAt || 0).getTime())
+      .sort((a, b) => b - a)[0];
+    const daysSinceSafety = lastSafetyIncident ? Math.floor((Date.now() - lastSafetyIncident) / 86400000) : null;
+
+    const fmeas = Storage.getAll("fmea");
+    let maxRpn = 0;
+    fmeas.forEach(f => (f.rows || []).forEach(r => {
+      const rpn = (+r.S || 0) * (+r.O || 0) * (+r.D || 0);
+      if (rpn > maxRpn) maxRpn = rpn;
+    }));
+
+    const kaizenTrend = this.monthlyBuckets(Storage.getAll("kaizen"), k => +k.costSave || 0);
+    const oeeTrend = Storage.getAll("oee").slice(0, 12).reverse().map(r => ({ value: (r.oee || 0) * 100 }));
+    const fivesTrend = Storage.getAll("fives").slice(0, 12).reverse().map(r => ({
+      value: typeof r.total === "number" ? (r.total / 20) * 100 : (+r.score || 0)
+    }));
+    const andonTrend = this.monthlyBuckets(andonRecs, () => 1);
+    const actionsClosedTrend = this.monthlyBuckets(
+      (typeof Actions !== "undefined" && Actions.collectLinked)
+        ? Actions.collectLinked().concat(Storage.getAll("actions")).filter(a => a.status === "done")
+        : Storage.getAll("actions").filter(a => a.status === "done"),
+      () => 1
+    );
+
+    const trendDir = (pts) => {
+      if (!pts || pts.length < 2) return "flat";
+      const first = pts.slice(0, Math.ceil(pts.length / 2)).reduce((s, p) => s + p.value, 0);
+      const last = pts.slice(Math.floor(pts.length / 2)).reduce((s, p) => s + p.value, 0);
+      if (last > first * 1.05) return "up";
+      if (last < first * 0.95) return "down";
+      return "flat";
+    };
+
+    const pillar = (key, icon, label, value, target, unit, note, trend, state, detail) => ({
+      key, icon, label, value, target, unit, note, trend, state, detail
+    });
+
+    const safetyState = kpis.andonActive === 0 ? "ok" : kpis.andonActive <= 2 ? "warn" : "risk";
+    const qualityState = kpis.fmeaHigh === 0 ? "ok" : kpis.fmeaHigh <= 3 ? "warn" : "risk";
+    const deliveryState = kpis.actionsOverdue === 0 ? "ok" : kpis.actionsOverdue <= 2 ? "warn" : "risk";
+    const costState = kpis.kaizenCount >= 5 ? "ok" : kpis.kaizenCount > 0 ? "warn" : "risk";
+    const peopleState = kpis.fivesPct >= 80 ? "ok" : kpis.fivesPct >= 60 ? "warn" : "risk";
 
     return [
-      { icon: "🦺", label: "Safety (S)", value: andonCount === 0 ? "✓ Temiz" : `${andonCount} Aktif`,
-        note: andonCount === 0 ? "Açık güvenlik olayı yok" : "Derhal müdahale",
-        state: state(andonCount === 0, andonCount <= 2) },
-      { icon: "🎯", label: "Quality (Q)", value: `${fmeaCrit} Risk`,
-        note: fmeaCrit === 0 ? "Kritik risk yok" : "FMEA'da yüksek RPN",
-        state: state(fmeaCrit === 0, fmeaCrit <= 3) },
-      { icon: "🚚", label: "Delivery (D)", value: overdue === 0 ? "✓ Zamanında" : `${overdue} Gecikmiş`,
-        note: overdue === 0 ? "Aksiyon gecikmesi yok" : "Takvim ihlali",
-        state: state(overdue === 0, overdue <= 2) },
-      { icon: "💰", label: "Cost (C)", value: kpis.kaizenTotal.toLocaleString("tr-TR") + "₺",
-        note: `${kpis.kaizenCount} kaizen · yıllık tasarruf`,
-        state: kpis.kaizenCount > 0 ? "ok" : "warn" },
-      { icon: "👥", label: "People (P)", value: `${fives}%`,
-        note: `5S · ${done} aksiyon kapandı`,
-        state: state(fives >= 80, fives >= 60) }
+      pillar("safety", "🦺", "Safety", kpis.andonActive, 0, "olay", "Güvenlik",
+        trendDir(andonTrend.map(p => ({ value: -p.value }))),
+        safetyState,
+        daysSinceSafety != null ? `${daysSinceSafety} gün kazasız` : "Kayıt yok"),
+      pillar("quality", "🎯", "Quality", maxRpn || 0, 100, "RPN", "Kalite & Risk",
+        trendDir(fmeas.length ? [{ value: maxRpn }] : []),
+        qualityState,
+        `${kpis.fmeaHigh} yüksek, ${kpis.fmeaMed} orta risk`),
+      pillar("delivery", "🚚", "Delivery", kpis.actionsOverdue, 0, "gecikme", "Teslimat & Aksiyon",
+        trendDir(actionsClosedTrend),
+        deliveryState,
+        `${kpis.actionsDone}/${kpis.actionsDone + kpis.actionsOpen + kpis.actionsOverdue} kapandı`),
+      pillar("cost", "💰", "Cost", Math.round(kpis.kaizenTotal / 1000), null, "k₺/yıl", "Maliyet & Kazanım",
+        trendDir(kaizenTrend),
+        costState,
+        `${kpis.kaizenCount} kaizen · hedef: 12 / yıl`),
+      pillar("people", "👥", "People", kpis.fivesPct, 80, "%", "İnsan & 5S",
+        trendDir(fivesTrend),
+        peopleState,
+        `Yalın olgunluk ${kpis.maturity}%`)
     ];
   },
 
