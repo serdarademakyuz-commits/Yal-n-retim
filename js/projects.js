@@ -5,13 +5,16 @@ const Projects = (function () {
   const DEFAULT_ID = "default";
   const DEFAULT_NAME = "Varsayılan Proje";
 
-  /* Tool keys that existed before multi-project support; used for one-time migration. */
+  /* All tool keys used for migration and for cleanup when a project is deleted.
+     Keep in sync when adding new tools. */
   const LEGACY_KEYS = [
     "why5", "fishbone", "pareto", "a3", "pdca", "rca",
     "takt", "oee", "smed", "vsm", "fives", "kanban",
     "andon", "heijunka", "kaizen", "muda", "pokayoke",
     "jit", "jidoka", "sqdcp", "gemba", "asakai",
-    "actions", "fmea", "spc"
+    "actions", "fmea", "spc",
+    "dmaic", "hoshin", "hypothesis", "audit", "consultant",
+    "consultant_logo"
   ];
 
   function list() {
@@ -89,7 +92,15 @@ const Projects = (function () {
     if (l.length <= 1) return false;
     const next = l.filter(x => x.id !== id);
     setList(next);
-    LEGACY_KEYS.forEach(k => localStorage.removeItem("yalin_" + id + "__" + k));
+    /* Purge everything scoped to this project, including tool data,
+       tool photos (<route>_photos) and any future scoped keys. */
+    const prefix = "yalin_" + id + "__";
+    const drop = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.indexOf(prefix) === 0) drop.push(k);
+    }
+    drop.forEach(k => localStorage.removeItem(k));
     if (getActive() === id) setActive(next[0].id);
     return true;
   }

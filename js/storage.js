@@ -22,7 +22,18 @@ const Storage = (function () {
   }
 
   function setAll(k, list) {
-    localStorage.setItem(key(k), JSON.stringify(list));
+    try {
+      localStorage.setItem(key(k), JSON.stringify(list));
+      return true;
+    } catch (e) {
+      const quota = e && (e.name === "QuotaExceededError" || e.code === 22 || e.code === 1014);
+      if (typeof UI !== "undefined" && UI.toast) {
+        UI.toast(quota ? "Depolama alanı dolu — fotoğrafları azaltın veya proje yedekleyin" : "Kayıt hatası", "danger");
+      } else {
+        console.error("Storage write failed:", e);
+      }
+      return false;
+    }
   }
 
   function add(k, item) {
@@ -66,7 +77,16 @@ const Storage = (function () {
     } catch (e) { return def; }
   }
   function setValue(k, v) {
-    localStorage.setItem(key(k), JSON.stringify(v));
+    try {
+      localStorage.setItem(key(k), JSON.stringify(v));
+      return true;
+    } catch (e) {
+      const quota = e && (e.name === "QuotaExceededError" || e.code === 22 || e.code === 1014);
+      if (typeof UI !== "undefined" && UI.toast) {
+        UI.toast(quota ? "Depolama dolu — eski fotoğrafları silin" : "Kayıt hatası", "danger");
+      }
+      return false;
+    }
   }
 
   function totalCount() {
