@@ -39,7 +39,7 @@ const Dashboard = {
     const priorityActions = this.priorityActions(5);
 
     root.innerHTML = `
-      <div class="exec-bar">
+      <div class="exec-bar exec-print">
         <div class="exec-bar-left">
           <div class="exec-label">AKTİF PROJE</div>
           <div class="exec-project">${UI.escape(projName)}</div>
@@ -56,7 +56,7 @@ const Dashboard = {
         </div>
       </div>
 
-      <div class="card exec-memo" id="execMemo">
+      <div class="card exec-memo exec-print" id="execMemo">
         <div class="exec-memo-head">
           <h3>📝 Yönetici Özeti</h3>
           <span class="exec-stamp">${nowStr}</span>
@@ -64,7 +64,7 @@ const Dashboard = {
         <p>${execSummary}</p>
       </div>
 
-      <div class="card sqdcp-strip">
+      <div class="card sqdcp-strip exec-print">
         <div class="sqdcp-head">
           <h3>🏭 SQDCP Stratejik Pusula</h3>
           <div class="sqdcp-legend">
@@ -164,7 +164,7 @@ const Dashboard = {
         </div>
       </div>
 
-      <div class="dash-section">
+      <div class="dash-section exec-print">
         <div class="section-head">
           <h3>🔥 Yönetici Odak Listesi</h3>
           <small>En kritik riskler · Kazanımlar · Öncelikli aksiyonlar</small>
@@ -294,7 +294,19 @@ const Dashboard = {
     this.renderFeed(root);
 
     const printBtn = root.querySelector("#printExec");
-    if (printBtn) printBtn.onclick = () => UI.printPage();
+    if (printBtn) printBtn.onclick = () => {
+      document.body.classList.add("printing-exec");
+      const cleanup = () => {
+        document.body.classList.remove("printing-exec");
+        window.removeEventListener("afterprint", cleanup);
+      };
+      window.addEventListener("afterprint", cleanup);
+      setTimeout(() => {
+        UI.printPage();
+        /* Safari falls back here if afterprint doesn't fire. */
+        setTimeout(cleanup, 500);
+      }, 50);
+    };
   },
 
   kpiColor(value, target) {

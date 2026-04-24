@@ -1041,3 +1041,36 @@ input[type=range] { width: 100%; accent-color: var(--amber); }
   h1, h2, h3, h4 { color: #000 !important; }
   .kpi { border: 1px solid #aaa !important; box-shadow: none !important; }
 }
+
+/* ===== EXECUTIVE MEMO PRINT MODE =====
+   When body.printing-exec is set (via the Executive Memo button),
+   only the marked .exec-print blocks appear in the printout.
+   This produces a clean one-page board report without tool grids. */
+@media print {
+  body.printing-exec .app-main > *:not(.exec-print) { display: none !important; }
+  body.printing-exec .exec-print { display: block !important; }
+  body.printing-exec .exec-memo {
+    background: #fff !important;
+    border-left: 4px solid #0b2545 !important;
+    page-break-after: avoid;
+  }
+  body.printing-exec .exec-bar {
+    background: #0b2545 !important;
+    color: #fff !important;
+    border: none !important;
+  }
+  body.printing-exec .exec-bar .exec-project,
+  body.printing-exec .exec-bar .exec-sub,
+  body.printing-exec .exec-bar .exec-label,
+  body.printing-exec .exec-bar .exec-kpi strong { color: #fff !important; }
+  body.printing-exec .exec-bar .exec-kpi { background: rgba(255,255,255,0.08) !important; border-color: rgba(255,255,255,0.15) !important; color: #e2e8f0 !important; }
+  body.printing-exec .sqdcp-cell { page-break-inside: avoid; border: 1px solid #555 !important; }
+  body.printing-exec .sq-light { display: none !important; }
+  body.printing-exec .focus-card { page-break-inside: avoid; }
+  body.printing-exec .app-main::after {
+    content: "Hazırlayan: _______________________     İmza: _______________________     Tarih: _______________";
+    display: block; margin-top: 40px; padding-top: 20px;
+    border-top: 1px solid #000; font-size: 11px; color: #333;
+  }
+  @page { margin: 14mm; }
+}
