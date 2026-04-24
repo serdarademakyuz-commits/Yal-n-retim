@@ -84,7 +84,7 @@ const Dashboard = {
               ? Math.min(100, Math.max(0, Math.round((p.value / p.target) * 100)))
               : null;
             return `
-              <div class="sqdcp-cell sqdcp-${p.state}" data-route="${p.key === 'safety' ? 'andon' : p.key === 'quality' ? 'fmea' : p.key === 'delivery' ? 'actions' : p.key === 'cost' ? 'kaizen' : 'fives'}">
+              <div class="sqdcp-cell sqdcp-${p.state}" data-route="sqdcp">
                 <div class="sq-top">
                   <div class="sq-light sqdcp-light-${p.state}"></div>
                   <div class="sq-letter">${p.label.charAt(0)}</div>
