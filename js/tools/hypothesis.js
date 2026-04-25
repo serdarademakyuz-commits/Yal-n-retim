@@ -158,13 +158,17 @@ const Hypothesis = {
     const m = this.mean(sample);
     const s = Math.sqrt(this.variance(sample));
     const se = s / Math.sqrt(n);
-    const t = (m - mu0) / se;
+    /* When variance is 0 the sample is constant. If mean equals μ₀ there is
+       literally no difference (t=0, fail to reject). If mean differs the
+       difference is deterministic (t→∞, reject). Avoid 0/0 → NaN in UI. */
+    const t = se > 0 ? (m - mu0) / se : (m === mu0 ? 0 : (m > mu0 ? Infinity : -Infinity));
     const df = n - 1;
     const tc = this.tCrit05(df);
+    const reject = isFinite(t) ? Math.abs(t) > tc : t !== 0;
     return {
       type: "t1", n, mean: m, sd: s, se, tStat: t, df, tCrit: tc, mu0,
-      reject: Math.abs(t) > tc,
-      verdict: Math.abs(t) > tc ? "H₀ reddedildi — fark istatistiksel olarak anlamlı." : "H₀ reddedilemedi — fark anlamlı değil."
+      reject,
+      verdict: reject ? "H₀ reddedildi — fark istatistiksel olarak anlamlı." : "H₀ reddedilemedi — fark anlamlı değil."
     };
   },
 
@@ -175,14 +179,18 @@ const Hypothesis = {
     const na = a.length, nb = b.length;
     /* Welch's t-test — variances need not be equal. */
     const se = Math.sqrt(va/na + vb/nb);
-    const t = (ma - mb) / se;
-    const df = Math.pow(va/na + vb/nb, 2) / (Math.pow(va/na, 2)/(na-1) + Math.pow(vb/nb, 2)/(nb-1));
+    /* Same constant-sample guard as tTest1. */
+    const t = se > 0 ? (ma - mb) / se : (ma === mb ? 0 : (ma > mb ? Infinity : -Infinity));
+    const df = se > 0
+      ? Math.pow(va/na + vb/nb, 2) / (Math.pow(va/na, 2)/(na-1) + Math.pow(vb/nb, 2)/(nb-1))
+      : (na + nb - 2);
     const tc = this.tCrit05(Math.round(df));
+    const reject = isFinite(t) ? Math.abs(t) > tc : t !== 0;
     return {
       type: "t2", na, nb, meanA: ma, meanB: mb, sdA: Math.sqrt(va), sdB: Math.sqrt(vb),
       diff: ma - mb, se, tStat: t, df, tCrit: tc,
-      reject: Math.abs(t) > tc,
-      verdict: Math.abs(t) > tc ? "İki grup anlamlı farklı." : "İki grup arasında anlamlı fark yok."
+      reject,
+      verdict: reject ? "İki grup anlamlı farklı." : "İki grup arasında anlamlı fark yok."
     };
   },
 
@@ -224,21 +232,25 @@ const Hypothesis = {
       sxx += (xs[i] - mx) ** 2;
       syy += (ys[i] - my) ** 2;
     }
-    const b = sxy / (sxx || 1e-9);
+    /* OLS regression is undefined when X has no variance — refuse rather than
+       returning silly Infinity slopes that look like real coefficients. */
+    if (sxx === 0) return { error: "X değerlerinin tümü aynı — regresyon yapılamaz" };
+    const b = sxy / sxx;
     const a = my - b * mx;
-    const r = sxy / Math.sqrt(sxx * syy || 1e-9);
+    const r = syy > 0 ? sxy / Math.sqrt(sxx * syy) : 0;
     const r2 = r * r;
-    /* standard error of slope */
     const yhat = xs.map(x => a + b * x);
     const sse = ys.reduce((s, y, i) => s + (y - yhat[i]) ** 2, 0);
-    const seB = Math.sqrt(sse / ((n - 2) || 1) / (sxx || 1e-9));
-    const t = b / (seB || 1e-9);
+    const denom = (n - 2) > 0 ? (n - 2) : 1;
+    const seB = Math.sqrt(sse / denom / sxx);
+    const t = seB > 0 ? b / seB : (b === 0 ? 0 : (b > 0 ? Infinity : -Infinity));
     const df = n - 2;
     const tc = this.tCrit05(df);
+    const reject = isFinite(t) ? Math.abs(t) > tc : t !== 0;
     return {
       type: "reg", n, a, b, r, r2, seB, tStat: t, df, tCrit: tc,
-      reject: Math.abs(t) > tc,
-      verdict: Math.abs(t) > tc ? "Eğim anlamlı — X, Y'yi istatistiksel olarak etkiliyor." : "Eğim anlamlı değil — güçlü bir ilişki gösterilemedi.",
+      reject,
+      verdict: reject ? "Eğim anlamlı — X, Y'yi istatistiksel olarak etkiliyor." : "Eğim anlamlı değil — güçlü bir ilişki gösterilemedi.",
       equation: `y = ${a.toFixed(3)} + ${b.toFixed(3)} · x`
     };
   },
