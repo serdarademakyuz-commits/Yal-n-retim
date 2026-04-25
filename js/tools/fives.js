@@ -88,7 +88,7 @@ const Fives = {
       <div class="list-item" data-id="${it.id}">
         <div class="li-main">
           <div class="li-title">${UI.escape(it.area)}</div>
-          <div class="li-sub">${UI.escape(it.auditor || "")} • ${UI.escape(it.date || "")} • Skor: ${it.total}/50</div>
+          <div class="li-sub">${UI.escape(it.auditor || "")} • ${UI.escape(it.date || "")} • Skor: ${it.total}/20 (${Math.round((+it.total / 20) * 100)}%)</div>
         </div>
         <div class="li-actions">
           <button class="btn btn-outline btn-sm" data-action="edit">✏️</button>

@@ -58,11 +58,16 @@ const Takt = {
     const breakMin = +root.querySelector("#breakMin").value || 0;
     const planned = +root.querySelector("#plannedDown").value || 0;
     const demand = +root.querySelector("#demand").value;
+    const period = root.querySelector("#period").value || "shift";
     const netMin = shifts * shiftMin - breakMin - planned;
     if (shifts <= 0 || shiftMin <= 0 || demand <= 0 || netMin <= 0) {
       UI.toast("Geçerli pozitif değerler girin", "danger"); return null;
     }
-    const taktSec = (netMin * 60) / demand;
+    /* Net time entered covers ${shifts} shifts (one production day). Scale demand
+       to that same window so Takt = Available Time / Demand stays dimensionally correct. */
+    const periodFactor = period === "shift" ? shifts : period === "week" ? (1/5) : 1;
+    const demandAdj = demand * periodFactor;
+    const taktSec = (netMin * 60) / demandAdj;
     const taktMin = taktSec / 60;
     const hourlyRate = 60 / taktMin;
     root.querySelector("#result").innerHTML = `
@@ -92,12 +97,13 @@ const Takt = {
         <div class="li-main">
           <div class="li-title">📐 Formül</div>
           <div class="li-sub">Takt = Net Çalışma Süresi ÷ Müşteri Talebi</div>
-          <div class="li-sub">= (${shifts} × ${shiftMin} - ${breakMin} - ${planned}) × 60 / ${demand}</div>
-          <div class="li-sub">= ${(netMin * 60).toFixed(0)} sn / ${demand} = <strong>${taktSec.toFixed(1)} sn</strong></div>
+          <div class="li-sub">= (${shifts} × ${shiftMin} - ${breakMin} - ${planned}) × 60 / ${demandAdj.toFixed(0)}</div>
+          <div class="li-sub">= ${(netMin * 60).toFixed(0)} sn / ${demandAdj.toFixed(0)} = <strong>${taktSec.toFixed(1)} sn</strong></div>
+          ${period !== "day" ? `<div class="li-sub" style="color:var(--muted)">Dönem ölçeklemesi: ${demand} ${period === "shift" ? "× " + shifts + " vardiya" : "÷ 5 iş günü"} = ${demandAdj.toFixed(0)} adet/gün</div>` : ""}
         </div>
       </div>
     `;
-    return { shifts, shiftMin, breakMin, planned, demand, netMin, taktSec, taktMin, hourlyRate };
+    return { shifts, shiftMin, breakMin, planned, demand, period, netMin, taktSec, taktMin, hourlyRate };
   },
   renderList(root) {
     const wrap = root.querySelector("#listWrap");
