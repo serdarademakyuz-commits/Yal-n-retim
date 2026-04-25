@@ -108,7 +108,10 @@ const Heijunka = {
     const avg = daily.reduce((s, x) => s + x, 0) / 7;
     const variance = daily.reduce((s, x) => s + Math.pow(x - avg, 2), 0) / 7;
     const std = Math.sqrt(variance);
-    const leveling = avg > 0 ? ((1 - std / avg) * 100).toFixed(1) : 0;
+    /* Clamp to [0, 100] — CV can exceed 1 (std > avg) when demand is lumpy,
+       which would otherwise produce a misleading negative leveling score. */
+    const levelingRaw = avg > 0 ? (1 - std / avg) * 100 : 0;
+    const leveling = Math.max(0, Math.min(100, levelingRaw)).toFixed(1);
     m.innerHTML = `
       <div class="kpi-grid">
         <div class="kpi"><div class="label">Max/Min</div><div class="value">${max}/${min}</div></div>
@@ -200,7 +203,8 @@ const Heijunka = {
     const cv = avg > 0 ? (std / avg) * 100 : 0;
     const max = Math.max(...daily);
     const min = Math.min(...daily);
-    const leveling = avg > 0 ? (1 - std / avg) * 100 : 0;
+    const levelingRaw = avg > 0 ? (1 - std / avg) * 100 : 0;
+    const leveling = Math.max(0, Math.min(100, levelingRaw));
     if (cv < 10) insights.push(Analyze.insight("success", `Seviyelendirme mükemmel (CV %${cv.toFixed(1)})`, "Günlük üretim dalgalanması çok düşük."));
     else if (cv < 25) insights.push(Analyze.insight("warn", `Seviyelendirme orta (CV %${cv.toFixed(1)})`, "Biraz daha dengeleme faydalı olur."));
     else insights.push(Analyze.insight("danger", `Seviyelendirme zayıf (CV %${cv.toFixed(1)})`, "Büyük dalgalanma; 'Otomatik Dengele' ile başlayın."));
