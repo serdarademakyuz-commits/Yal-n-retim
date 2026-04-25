@@ -138,12 +138,18 @@ const Andon = {
       level: root.querySelector("#level").value,
       station, issue,
       caller: root.querySelector("#caller").value,
-      responder: root.querySelector("#responder").value,
-      status: "active"
+      responder: root.querySelector("#responder").value
     };
-    if (this.state.editingId) Storage.update(this.KEY, this.state.editingId, data);
-    else Storage.add(this.KEY, data);
-    UI.toast("Andon bildirildi", "success");
+    if (this.state.editingId) {
+      /* Preserve the existing status (and resolution metadata if resolved)
+         so editing a closed Andon doesn't accidentally reopen it. */
+      Storage.update(this.KEY, this.state.editingId, data);
+      UI.toast("Andon güncellendi", "success");
+    } else {
+      data.status = "active";
+      Storage.add(this.KEY, data);
+      UI.toast("Andon bildirildi", "success");
+    }
     this.render(root);
   },
 

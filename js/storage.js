@@ -96,7 +96,8 @@ const Storage = (function () {
       "takt", "oee", "smed", "vsm", "fives", "kanban",
       "andon", "heijunka", "kaizen", "muda", "pokayoke",
       "jit", "jidoka", "sqdcp", "gemba", "asakai",
-      "actions"
+      "actions",
+      "dmaic", "hoshin", "hypothesis", "audit", "consultant"
     ];
     return keys.reduce((sum, k) => sum + getAll(k).length, 0);
   }
