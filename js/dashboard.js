@@ -64,16 +64,16 @@ const Dashboard = {
         <p>${execSummary}</p>
       </div>
 
-      <div class="card sqdcp-strip exec-print">
-        <div class="sqdcp-head">
+      <div class="card xboard-strip exec-print">
+        <div class="xboard-head">
           <h3>🏭 SQDCP Stratejik Pusula</h3>
-          <div class="sqdcp-legend">
+          <div class="xboard-legend">
             <span><span class="lg-dot" style="background:var(--success)"></span>Hedefte</span>
             <span><span class="lg-dot" style="background:var(--amber)"></span>İzleniyor</span>
             <span><span class="lg-dot" style="background:var(--danger)"></span>Risk</span>
           </div>
         </div>
-        <div class="sqdcp-grid">
+        <div class="xboard-grid">
           ${sqdcp.map(p => {
             const arrow = p.trend === "up" ? "▲" : p.trend === "down" ? "▼" : "▬";
             const trendClass = p.state === "risk"
@@ -84,9 +84,9 @@ const Dashboard = {
               ? Math.min(100, Math.max(0, Math.round((p.value / p.target) * 100)))
               : null;
             return `
-              <div class="sqdcp-cell sqdcp-${p.state}" data-route="sqdcp">
+              <div class="xboard-cell xboard-${p.state}" data-route="sqdcp">
                 <div class="sq-top">
-                  <div class="sq-light sqdcp-light-${p.state}"></div>
+                  <div class="sq-light xboard-light-${p.state}"></div>
                   <div class="sq-letter">${p.label.charAt(0)}</div>
                   <div class="sq-title">
                     <div class="sq-label">${p.icon} ${p.label}</div>
@@ -100,7 +100,7 @@ const Dashboard = {
                 </div>
                 ${targetLabel ? `<div class="sq-target">
                   <small>${targetLabel}</small>
-                  ${pctToTarget != null ? `<div class="sq-bar"><div class="sq-bar-fill sqdcp-fill-${p.state}" style="width:${pctToTarget}%"></div></div>` : ""}
+                  ${pctToTarget != null ? `<div class="sq-bar"><div class="sq-bar-fill xboard-fill-${p.state}" style="width:${pctToTarget}%"></div></div>` : ""}
                 </div>` : ""}
                 <div class="sq-detail">${p.detail}</div>
               </div>

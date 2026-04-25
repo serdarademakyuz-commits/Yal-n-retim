@@ -153,8 +153,11 @@ const Kaizen = {
     ["title", "author", "area", "before", "after"].forEach(k => root.querySelector("#" + k).value = "");
     root.querySelector("#timeSave").value = 0;
     root.querySelector("#costSave").value = 0;
+    root.querySelector("#investment").value = 0;
+    root.querySelector("#implMonths").value = 1;
     root.querySelector("#category").value = "Güvenlik";
     root.querySelector("#status").value = "idea";
+    this.renderROI(root);
     root.querySelector("#saveBtn").textContent = "💾 Kaydet";
     UI.toast("Temizlendi");
   },
