@@ -175,8 +175,8 @@ const Asakai = {
       if (hitRatio < 70) insights.push(Analyze.insight("warn", `Hedef tutturma: %${hitRatio.toFixed(0)}`, "Kapasite/Takt/Heijunka planlarını gözden geçirin."));
       else insights.push(Analyze.insight("success", `Hedef tutturma: %${hitRatio.toFixed(0)}`, "İstikrarlı performans — standartlaştırın."));
     }
-    const shortDuration = records.filter(r => r.headcount && +r.headcount > 15).length;
-    if (shortDuration > 0) insights.push(Analyze.insight("info", `${shortDuration} toplantıda 15+ katılımcı`, "Asakai 15 dk/max 10 kişi önerilir. Büyük gruplarda bölün."));
+    const oversized = records.filter(r => r.headcount && +r.headcount > 10).length;
+    if (oversized > 0) insights.push(Analyze.insight("info", `${oversized} toplantıda 10+ katılımcı`, "Asakai 5-15 dakika içinde, en fazla 10 kişi ile yapılmalıdır. Büyük gruplarda hat/vardiya bazında bölün."));
     return { insights, text };
   },
 
