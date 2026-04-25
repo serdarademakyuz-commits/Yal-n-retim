@@ -322,11 +322,15 @@ const Dashboard = {
   },
 
   sqdcpStatus(kpis) {
-    const cutoff = new Date(Date.now() - 30 * 86400000);
     const andonRecs = Storage.getAll("andon");
+    /* Red Andon in TPS = emergency stop / hat duruşu — used as the safety
+       incident signal here. Earlier code filtered by `a.type` which is not
+       a field on Andon records (records use `level`), so the "X gün kazasız"
+       counter was always silently null. Use the actual schema. */
     const lastSafetyIncident = andonRecs
-      .filter(a => (a.type || "").toLowerCase().includes("güv") || (a.type || "").toLowerCase().includes("safe"))
+      .filter(a => a.level === "red")
       .map(a => new Date(a.createdAt || a.updatedAt || 0).getTime())
+      .filter(t => isFinite(t) && t > 0)
       .sort((a, b) => b - a)[0];
     const daysSinceSafety = lastSafetyIncident ? Math.floor((Date.now() - lastSafetyIncident) / 86400000) : null;
 
@@ -373,7 +377,9 @@ const Dashboard = {
       pillar("safety", "🦺", "Safety", kpis.andonActive, 0, "olay", "Güvenlik",
         trendDir(andonTrend.map(p => ({ value: -p.value }))),
         safetyState,
-        daysSinceSafety != null ? `${daysSinceSafety} gün kazasız` : "Kayıt yok"),
+        daysSinceSafety != null
+          ? (daysSinceSafety === 0 ? "Bugün kırmızı Andon" : `Son kırmızı Andon: ${daysSinceSafety} gün önce`)
+          : "Kırmızı Andon kaydı yok"),
       pillar("quality", "🎯", "Quality", maxRpn || 0, 100, "RPN", "Kalite & Risk",
         trendDir(fmeas.length ? [{ value: maxRpn }] : []),
         qualityState,
