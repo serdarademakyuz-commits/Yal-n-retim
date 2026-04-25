@@ -524,7 +524,10 @@ const Dashboard = {
   collectKPIs() {
     const oees = Storage.getAll("oee");
     const lastOee = oees[0];
-    const oeePct = lastOee ? +(lastOee.oee * 100).toFixed(1) : 0;
+    /* Defensive read: legacy/partial records may lack the `oee` field; treat as 0
+       rather than letting `undefined * 100 = NaN` propagate to the exec memo and gauge. */
+    const oeeRaw = lastOee && typeof lastOee.oee === "number" ? lastOee.oee : 0;
+    const oeePct = +(oeeRaw * 100).toFixed(1);
 
     const fives = Storage.getAll("fives");
     const lastFives = fives[0];
