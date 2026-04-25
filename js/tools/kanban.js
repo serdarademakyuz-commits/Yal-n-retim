@@ -7,11 +7,13 @@ const Kanban = {
     { k: "doing", n: "🔄 Devam Ediyor", c: "doing" },
     { k: "done",  n: "✅ Tamamlandı", c: "done" }
   ],
+  /* Use Storage.getValue / setValue so WIP limits live in the project-scoped
+     namespace (yalin_<project>__kanban_wip) — otherwise switching from one
+     customer's project to another would carry over the previous limits. */
   getWIP() {
-    try { return JSON.parse(localStorage.getItem(this.WIP_KEY)) || { todo: 0, doing: 3, done: 0 }; }
-    catch { return { todo: 0, doing: 3, done: 0 }; }
+    return Storage.getValue(this.WIP_KEY, { todo: 0, doing: 3, done: 0 });
   },
-  setWIP(w) { localStorage.setItem(this.WIP_KEY, JSON.stringify(w)); },
+  setWIP(w) { Storage.setValue(this.WIP_KEY, w); },
   render(root) {
     this.state.editingId = null;
     const wip = this.getWIP();
