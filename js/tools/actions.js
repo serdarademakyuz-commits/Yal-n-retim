@@ -54,11 +54,15 @@ const Actions = {
         refId: it.id, refKey: "asakai"
       });
     }));
-    /* Kaizen with status="done" is finished — its action is complete. */
+    /* Kaizen has no separate "action" field — the kaizen title IS the
+       planned improvement (with before/after describing the transition).
+       Earlier code read non-existent it.action/it.improvement and silently
+       dropped every kaizen. Now use it.title and skip closed cycles. */
     Storage.getAll("kaizen").forEach(it => {
       if (it.status === "done") return;
-      push("Kaizen", it.action || it.improvement, {
-        context: it.problem || it.title || "", refId: it.id, refKey: "kaizen"
+      push("Kaizen", it.title, {
+        context: it.area || it.before || "",
+        refId: it.id, refKey: "kaizen"
       });
     });
     Storage.getAll("fmea").forEach(it => (it.rows || []).forEach(r => push("FMEA", r.action, {
