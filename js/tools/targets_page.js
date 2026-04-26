@@ -29,10 +29,10 @@ const TargetsPage = {
         <div class="card">
           <h3>🛠️ ${UI.escape(toolName)}</h3>
           ${byTool[toolName].map(t => `
-            <div class="field">
+            <div class="field" data-key="${UI.escape(t.key)}">
               <label>${UI.escape(t.label)}${t.unit ? ` (${UI.escape(t.unit)})` : ""}</label>
               <div style="display:flex;gap:8px;align-items:center">
-                <input type="number" step="any" id="t-${UI.escape(t.key)}" value="${t.value}" style="flex:1">
+                <input type="number" step="any" data-target-input value="${t.value}" style="flex:1">
                 <button class="btn btn-outline btn-sm" data-reset="${UI.escape(t.key)}" title="Varsayılana döndür">↩</button>
               </div>
               ${t.help ? `<small style="color:var(--muted);display:block;margin-top:4px">${UI.escape(t.help)}</small>` : ""}
@@ -50,9 +50,12 @@ const TargetsPage = {
     `;
 
     root.querySelector("#saveAll").onclick = () => {
-      Object.keys(all).forEach(k => {
-        const el = root.querySelector("#t-" + k);
-        if (el) Targets.set(k, el.value);
+      /* Use data-key attribute lookup — IDs with dots ("oee.target") would
+         collide with CSS class-selector parsing. */
+      root.querySelectorAll("[data-key]").forEach(field => {
+        const k = field.dataset.key;
+        const inp = field.querySelector("[data-target-input]");
+        if (inp) Targets.set(k, inp.value);
       });
       UI.toast("Hedefler kaydedildi", "success");
       this.render(root);
