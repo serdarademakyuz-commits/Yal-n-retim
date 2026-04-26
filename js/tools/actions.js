@@ -22,12 +22,16 @@ const Actions = {
     Storage.getAll("why5").forEach(it => push("5 Neden", it.action, {
       context: it.problem || "", owner: "", due: "", refId: it.id, refKey: "why5"
     }));
-    Storage.getAll("pdca").forEach(it => push("PDCA", it.act, {
-      context: it.plan || it.problem || "", owner: "", due: "", refId: it.id, refKey: "pdca"
-    }));
+    /* PDCA: skip cycles already closed (status="done"); their act is complete. */
+    Storage.getAll("pdca").forEach(it => {
+      if (it.status === "done") return;
+      push("PDCA", it.act, {
+        context: it.plan || it.problem || "", owner: "", due: "", refId: it.id, refKey: "pdca"
+      });
+    });
     Storage.getAll("rca").forEach(it => {
-      push("RCA (Düzeltici)", it.corrective, { context: it.problem || "", refId: it.id, refKey: "rca" });
-      push("RCA (Önleyici)",  it.preventive, { context: it.problem || "", refId: it.id, refKey: "rca" });
+      push("RCA (Düzeltici)", it.corrective, { context: it.event || it.problem || "", refId: it.id, refKey: "rca" });
+      push("RCA (Önleyici)",  it.preventive, { context: it.event || it.problem || "", refId: it.id, refKey: "rca" });
     });
     Storage.getAll("a3").forEach(it => push("A3 Plan", it.plan, {
       context: it.title || "", refId: it.id, refKey: "a3"
@@ -40,12 +44,23 @@ const Actions = {
         }
       });
     });
-    Storage.getAll("asakai").forEach(it => (it.agenda || []).forEach(a => push("Asakai", a.action, {
-      context: a.topic || "", refId: it.id, refKey: "asakai"
-    })));
-    Storage.getAll("kaizen").forEach(it => push("Kaizen", it.action || it.improvement, {
-      context: it.problem || it.title || "", refId: it.id, refKey: "kaizen"
+    /* Asakai agenda items use the field `text` (not `action`) and have an
+       optional `done` flag — earlier code read non-existent fields, so Asakai
+       actions never reached the linked tracker. */
+    Storage.getAll("asakai").forEach(it => (it.agenda || []).forEach(a => {
+      if (a.done) return;
+      push("Asakai", a.text, {
+        context: it.team || it.date || "", owner: a.owner || "", due: a.due || "",
+        refId: it.id, refKey: "asakai"
+      });
     }));
+    /* Kaizen with status="done" is finished — its action is complete. */
+    Storage.getAll("kaizen").forEach(it => {
+      if (it.status === "done") return;
+      push("Kaizen", it.action || it.improvement, {
+        context: it.problem || it.title || "", refId: it.id, refKey: "kaizen"
+      });
+    });
     Storage.getAll("fmea").forEach(it => (it.rows || []).forEach(r => push("FMEA", r.action, {
       context: (r.failureMode || "") + " — " + (r.effect || ""), refId: it.id, refKey: "fmea"
     })));
