@@ -19,7 +19,8 @@ const Categories = {
     { r: "asakai",   i: "🌅", n: "Asakai",             d: "Sabah toplantısı" },
     { r: "hoshin",   i: "🧭", n: "Hoshin Kanri",       d: "X-Matrix stratejik dağıtım" },
     { r: "trends",   i: "📈", n: "Trendler",           d: "OEE/5S/Takt zaman serisi" },
-    { r: "consultant", i: "📑", n: "Danışmanlık Raporu", d: "Kapak + özet + imza" }
+    { r: "consultant", i: "📑", n: "Danışmanlık Raporu", d: "Kapak + özet + imza" },
+    { r: "targets",  i: "🎯", n: "Hedefler",            d: "Kuruluş yalın hedeflerini sen belirle" }
   ],
 
   TECHNIQUES: [

@@ -14,7 +14,7 @@ const Projects = (function () {
     "jit", "jidoka", "sqdcp", "gemba", "asakai",
     "actions", "fmea", "spc",
     "dmaic", "hoshin", "hypothesis", "audit", "consultant",
-    "consultant_logo"
+    "consultant_logo", "user_targets"
   ];
 
   function list() {

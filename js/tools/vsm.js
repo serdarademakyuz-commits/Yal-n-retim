@@ -290,9 +290,10 @@ const VSM = {
       insights.push(Analyze.insight("warn", "Süre verisi yok", "Çevrim ve bekleme sürelerini girin."));
       return { insights, text: ["Süre verisi yok."] };
     }
-    if (pct >= 25) insights.push(Analyze.insight("success", `VA oranı %${pct.toFixed(1)} — İyi seviye`, "25% üstü yalın akış için iyi bir göstergedir."));
-    else if (pct >= 5) insights.push(Analyze.insight("warn", `VA oranı %${pct.toFixed(1)} — Tipik`, "Çoğu işletmede %5 civarındadır; hedef %25 üzeri."));
-    else insights.push(Analyze.insight("danger", `VA oranı %${pct.toFixed(1)} — Düşük`, "Değer katmayan süre baskın; NVA düğümlerini azaltın."));
+    const pceTgt = Targets.get("vsm.pceTarget");
+    if (pct >= pceTgt) insights.push(Analyze.insight("success", `VA oranı %${pct.toFixed(1)} ≥ hedef %${pceTgt}`, "Yalın akış iyi seviyede."));
+    else if (pct >= pceTgt / 5) insights.push(Analyze.insight("warn", `VA oranı %${pct.toFixed(1)} (hedef %${pceTgt})`, "Çoğu işletme bu seviyededir; daha fazla NVA azaltın."));
+    else insights.push(Analyze.insight("danger", `VA oranı %${pct.toFixed(1)} — Düşük (hedef %${pceTgt})`, "Değer katmayan süre baskın; NVA düğümlerini azaltın."));
     text.push(`VA: %${pct.toFixed(1)} (${vaTime.toFixed(0)}/${leadTime.toFixed(0)} sn)`);
 
     // Dominant NVA source by type

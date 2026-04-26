@@ -176,9 +176,10 @@ const Andon = {
       const durMs = resolved.map(r => new Date(r.resolvedAt) - new Date(r.createdAt)).filter(x => x > 0);
       if (durMs.length) {
         const avgMin = (durMs.reduce((s, x) => s + x, 0) / durMs.length) / 60000;
-        insights.push(Analyze.insight(avgMin < 15 ? "success" : avgMin < 60 ? "warn" : "danger",
-          `Ortalama çözüm süresi: ${avgMin.toFixed(1)} dk`,
-          `${resolved.length} çözülmüş olaydan. Hedef <15 dk ideal.`));
+        const tgt = Targets.get("andon.responseMin");
+        insights.push(Analyze.insight(avgMin < tgt ? "success" : avgMin < tgt * 4 ? "warn" : "danger",
+          `Ortalama çözüm süresi: ${avgMin.toFixed(1)} dk (hedef < ${tgt} dk)`,
+          `${resolved.length} çözülmüş olaydan. Hedef Hedefler sayfasından ayarlanır.`));
         text.push(`Ort. çözüm: ${avgMin.toFixed(1)} dk`);
       }
     }

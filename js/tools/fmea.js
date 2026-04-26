@@ -4,8 +4,9 @@ const FMEA = {
   state: { editingId: null },
 
   rpnClass(rpn) {
-    if (rpn <= 50) return "low";
-    if (rpn <= 100) return "med";
+    const low = Targets.get("fmea.rpnLow"), high = Targets.get("fmea.rpnHigh");
+    if (rpn <= low) return "low";
+    if (rpn <= high) return "med";
     return "high";
   },
 
@@ -180,11 +181,12 @@ const FMEA = {
     const rpns = rows.map(r => (+r.S || 0) * (+r.O || 0) * (+r.D || 0));
     const maxR = Math.max(...rpns);
     const avgR = Math.round(rpns.reduce((a, b) => a + b, 0) / rpns.length);
-    const crit = rpns.filter(r => r > 100).length;
-    const med = rpns.filter(r => r > 50 && r <= 100).length;
+    const lowT = Targets.get("fmea.rpnLow"), highT = Targets.get("fmea.rpnHigh");
+    const crit = rpns.filter(r => r > highT).length;
+    const med = rpns.filter(r => r > lowT && r <= highT).length;
     insights.push(Analyze.insight("info", `En yüksek RPN: ${maxR}`, `Ortalama ${avgR}. ${rows.length} satır.`));
-    if (crit > 0) insights.push(Analyze.insight("danger", `${crit} kritik risk (RPN>100)`, "Bu satırlar için önlemler öncelikli uygulanmalı."));
-    else if (med > 0) insights.push(Analyze.insight("warn", `${med} orta risk (51-100)`, "Bu satırlarda D veya O'yu düşürecek önlemler planlayın."));
+    if (crit > 0) insights.push(Analyze.insight("danger", `${crit} kritik risk (RPN > ${highT})`, "Bu satırlar için önlemler öncelikli uygulanmalı."));
+    else if (med > 0) insights.push(Analyze.insight("warn", `${med} orta risk (${lowT+1}-${highT})`, "Bu satırlarda D veya O'yu düşürecek önlemler planlayın."));
     else insights.push(Analyze.insight("success", "Kritik risk yok", "Tüm RPN değerleri düşük seviyede."));
     const noAction = rows.filter(r => !r.action || r.action.trim().length < 3).length;
     if (noAction) insights.push(Analyze.insight("warn", `${noAction} satırda aksiyon eksik`, "Her yüksek RPN için somut karşı önlem tanımlayın."));

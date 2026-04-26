@@ -53,8 +53,8 @@ const Dashboard = {
         </div>
         <div class="exec-bar-right">
           <div class="exec-kpis">
-            <span class="exec-kpi"><span class="dot" style="background:${this.kpiColor(kpis.oeePct, 85)}"></span>OEE <strong>${kpis.oeePct.toFixed(0)}%</strong></span>
-            <span class="exec-kpi"><span class="dot" style="background:${this.kpiColor(kpis.fivesPct, 80)}"></span>5S <strong>${kpis.fivesPct}%</strong></span>
+            <span class="exec-kpi"><span class="dot" style="background:${this.kpiColor(kpis.oeePct, Targets.get("oee.target"))}"></span>OEE <strong>${kpis.oeePct.toFixed(0)}%</strong></span>
+            <span class="exec-kpi"><span class="dot" style="background:${this.kpiColor(kpis.fivesPct, Targets.get("fives.target"))}"></span>5S <strong>${kpis.fivesPct}%</strong></span>
             <span class="exec-kpi"><span class="dot" style="background:${kpis.actionsOverdue===0?"var(--success)":"var(--danger)"}"></span>Gecikme <strong>${kpis.actionsOverdue}</strong></span>
             <span class="exec-kpi"><span class="dot" style="background:${kpis.andonActive===0?"var(--success)":"var(--danger)"}"></span>Andon <strong>${kpis.andonActive}</strong></span>
           </div>
@@ -268,10 +268,10 @@ const Dashboard = {
       </div>
     `;
 
-    this.drawGauge(root.querySelector("#gauge-oee"), kpis.oeePct, { label: "OEE", target: 85, unit: "%", source: kpis.oeeSource });
-    this.drawGauge(root.querySelector("#gauge-fives"), kpis.fivesPct, { label: "5S Skoru", target: 80, unit: "%", source: kpis.fivesSource });
-    this.drawGauge(root.querySelector("#gauge-quality"), kpis.qualityPct, { label: "Kalite", target: 99, unit: "%", source: kpis.qualitySource });
-    this.drawGauge(root.querySelector("#gauge-maturity"), kpis.maturity, { label: "Yalın Olgunluk", target: 75, unit: "%", source: `${kpis.toolsUsed}/${this.tiles.length} araç` });
+    this.drawGauge(root.querySelector("#gauge-oee"), kpis.oeePct, { label: "OEE", target: Targets.get("oee.target"), unit: "%", source: kpis.oeeSource });
+    this.drawGauge(root.querySelector("#gauge-fives"), kpis.fivesPct, { label: "5S Skoru", target: Targets.get("fives.target"), unit: "%", source: kpis.fivesSource });
+    this.drawGauge(root.querySelector("#gauge-quality"), kpis.qualityPct, { label: "Kalite", target: Targets.get("quality.target"), unit: "%", source: kpis.qualitySource });
+    this.drawGauge(root.querySelector("#gauge-maturity"), kpis.maturity, { label: "Yalın Olgunluk", target: Targets.get("maturity.target"), unit: "%", source: `${kpis.toolsUsed}/${this.tiles.length} araç` });
 
     this.drawBarTrend(root.querySelector("#chart-kaizen"), kpis.kaizenMonthly, { color: "#06a77d", unit: "₺" });
     this.drawDonut(root.querySelector("#chart-actions"), [
@@ -370,8 +370,11 @@ const Dashboard = {
     const safetyState = kpis.andonActive === 0 ? "ok" : kpis.andonActive <= 2 ? "warn" : "risk";
     const qualityState = kpis.fmeaHigh === 0 ? "ok" : kpis.fmeaHigh <= 3 ? "warn" : "risk";
     const deliveryState = kpis.actionsOverdue === 0 ? "ok" : kpis.actionsOverdue <= 2 ? "warn" : "risk";
-    const costState = kpis.kaizenCount >= 5 ? "ok" : kpis.kaizenCount > 0 ? "warn" : "risk";
-    const peopleState = kpis.fivesPct >= 80 ? "ok" : kpis.fivesPct >= 60 ? "warn" : "risk";
+    /* Half of yearly kaizen target = "ok" threshold; anything > 0 = "warn" */
+    const kaizenYearlyTarget = Targets.get("kaizen.yearlyTarget");
+    const costState = kpis.kaizenCount >= kaizenYearlyTarget / 2 ? "ok" : kpis.kaizenCount > 0 ? "warn" : "risk";
+    const fivesTarget = Targets.get("fives.target"), fivesAccept = Targets.get("fives.acceptable");
+    const peopleState = kpis.fivesPct >= fivesTarget ? "ok" : kpis.fivesPct >= fivesAccept ? "warn" : "risk";
 
     return [
       pillar("safety", "🦺", "Safety", kpis.andonActive, 0, "olay", "Güvenlik",
@@ -391,8 +394,8 @@ const Dashboard = {
       pillar("cost", "💰", "Cost", Math.round(kpis.kaizenTotal / 1000), null, "k₺/yıl", "Maliyet & Kazanım",
         trendDir(kaizenTrend),
         costState,
-        `${kpis.kaizenCount} kaizen · hedef: 12 / yıl`),
-      pillar("people", "👥", "People", kpis.fivesPct, 80, "%", "İnsan & 5S",
+        `${kpis.kaizenCount} kaizen · hedef: ${Targets.get("kaizen.yearlyTarget")} / yıl`),
+      pillar("people", "👥", "People", kpis.fivesPct, Targets.get("fives.target"), "%", "İnsan & 5S",
         trendDir(fivesTrend),
         peopleState,
         `Yalın olgunluk ${kpis.maturity}%`)
@@ -401,9 +404,10 @@ const Dashboard = {
 
   generateExecSummary(kpis) {
     const parts = [];
-    const oeeTxt = kpis.oeePct >= 85 ? `<strong style="color:var(--success)">dünya klası seviyede (${kpis.oeePct.toFixed(0)}%)</strong>`
-                 : kpis.oeePct >= 60 ? `<strong style="color:var(--amber)">sektör ortalamasında (${kpis.oeePct.toFixed(0)}%)</strong>`
-                 : `<strong style="color:var(--danger)">hedefin altında (${kpis.oeePct.toFixed(0)}%)</strong>`;
+    const oeeT = Targets.get("oee.target"), oeeA = Targets.get("oee.acceptable");
+    const oeeTxt = kpis.oeePct >= oeeT ? `<strong style="color:var(--success)">hedefe ulaşıldı (${kpis.oeePct.toFixed(0)}% ≥ ${oeeT}%)</strong>`
+                 : kpis.oeePct >= oeeA ? `<strong style="color:var(--amber)">kabul eşiğinde (${kpis.oeePct.toFixed(0)}%, hedef ${oeeT}%)</strong>`
+                 : `<strong style="color:var(--danger)">hedefin altında (${kpis.oeePct.toFixed(0)}%, hedef ${oeeT}%)</strong>`;
     parts.push(`OEE ${oeeTxt}.`);
 
     if (kpis.kaizenCount > 0) {
@@ -428,10 +432,10 @@ const Dashboard = {
       parts.push(`<strong style="color:var(--danger)">${kpis.andonActive} aktif Andon sinyali</strong> — saha müdahalesi gerekli.`);
     }
 
-    const maturity = kpis.maturity;
-    if (maturity >= 75) parts.push(`Yalın olgunluk <strong style="color:var(--success)">${maturity}%</strong> — araçların çoğu aktif.`);
-    else if (maturity >= 40) parts.push(`Yalın olgunluk <strong style="color:var(--amber)">${maturity}%</strong> — araç kapsamı genişletilmeli.`);
-    else parts.push(`Yalın olgunluk <strong style="color:var(--danger)">${maturity}%</strong> — yalın dönüşüm başlangıç aşamasında.`);
+    const maturity = kpis.maturity, mT = Targets.get("maturity.target");
+    if (maturity >= mT) parts.push(`Yalın olgunluk <strong style="color:var(--success)">${maturity}% ≥ ${mT}%</strong> — araçların çoğu aktif.`);
+    else if (maturity >= mT * 0.55) parts.push(`Yalın olgunluk <strong style="color:var(--amber)">${maturity}%</strong> (hedef ${mT}%) — araç kapsamı genişletilmeli.`);
+    else parts.push(`Yalın olgunluk <strong style="color:var(--danger)">${maturity}%</strong> (hedef ${mT}%) — yalın dönüşüm başlangıç aşamasında.`);
 
     return parts.join(" ");
   },

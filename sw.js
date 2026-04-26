@@ -1,4 +1,4 @@
-const CACHE = "yalin-v28";
+const CACHE = "yalin-v29";
 const ASSETS = [
   "./",
   "./index.html",
@@ -10,6 +10,7 @@ const ASSETS = [
   "./js/projects.js",
   "./js/storage.js",
   "./js/ui.js",
+  "./js/targets.js",
   "./js/analyze.js",
   "./js/dashboard.js",
   "./js/reports.js",
@@ -45,7 +46,8 @@ const ASSETS = [
   "./js/tools/hypothesis.js",
   "./js/tools/audit.js",
   "./js/tools/trends.js",
-  "./js/tools/consultant.js"
+  "./js/tools/consultant.js",
+  "./js/tools/targets_page.js"
 ];
 
 self.addEventListener("install", (e) => {

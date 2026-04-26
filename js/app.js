@@ -36,7 +36,8 @@ const Router = (function () {
     hypothesis:{ title: "Hipotez Testi",            render: (r) => Hypothesis.render(r) },
     audit:     { title: "Denetim Listeleri",        render: (r) => Audit.render(r) },
     trends:    { title: "Trend Analizi",            render: (r) => Trends.render(r) },
-    consultant:{ title: "Danışmanlık Raporu",       render: (r) => Consultant.render(r) }
+    consultant:{ title: "Danışmanlık Raporu",       render: (r) => Consultant.render(r) },
+    targets:   { title: "Hedefler",                 render: (r) => TargetsPage.render(r) }
   };
 
   /* Routes that are overview/list pages — no per-tool photo card. */

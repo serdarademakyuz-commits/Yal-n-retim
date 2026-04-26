@@ -13,7 +13,7 @@ const SMED = {
         <div class="field"><label>Proses / Makine</label><input id="process" placeholder="Ör: Pres-5 Kalıp Değişimi"></div>
         <div class="grid-2">
           <div class="field"><label>Mevcut Süre (dk)</label><input id="before" type="number" min="0" value="45"></div>
-          <div class="field"><label>Hedef Süre (dk)</label><input id="target" type="number" min="0" value="10"></div>
+          <div class="field"><label>Hedef Süre (dk)</label><input id="target" type="number" min="0" value="${typeof Targets !== 'undefined' ? Targets.get('smed.targetMin') : 10}"></div>
         </div>
       </div>
 

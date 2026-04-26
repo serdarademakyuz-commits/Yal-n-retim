@@ -205,9 +205,10 @@ const Heijunka = {
     const min = Math.min(...daily);
     const levelingRaw = avg > 0 ? (1 - std / avg) * 100 : 0;
     const leveling = Math.max(0, Math.min(100, levelingRaw));
-    if (cv < 10) insights.push(Analyze.insight("success", `Seviyelendirme mükemmel (CV %${cv.toFixed(1)})`, "Günlük üretim dalgalanması çok düşük."));
-    else if (cv < 25) insights.push(Analyze.insight("warn", `Seviyelendirme orta (CV %${cv.toFixed(1)})`, "Biraz daha dengeleme faydalı olur."));
-    else insights.push(Analyze.insight("danger", `Seviyelendirme zayıf (CV %${cv.toFixed(1)})`, "Büyük dalgalanma; 'Otomatik Dengele' ile başlayın."));
+    const cvExc = Targets.get("heijunka.cvExcellent"), cvAcc = Targets.get("heijunka.cvAcceptable");
+    if (cv < cvExc) insights.push(Analyze.insight("success", `Seviyelendirme mükemmel (CV %${cv.toFixed(1)} < %${cvExc})`, "Günlük üretim dalgalanması çok düşük."));
+    else if (cv < cvAcc) insights.push(Analyze.insight("warn", `Seviyelendirme orta (CV %${cv.toFixed(1)})`, `Hedef: CV < %${cvExc}. Dengeleme uygulayın.`));
+    else insights.push(Analyze.insight("danger", `Seviyelendirme zayıf (CV %${cv.toFixed(1)} ≥ %${cvAcc})`, "Büyük dalgalanma; 'Otomatik Dengele' ile başlayın."));
     text.push(`CV: %${cv.toFixed(1)} (std ${std.toFixed(1)})`);
     insights.push(Analyze.insight("info", `Dengeleme skoru: %${leveling.toFixed(1)}`, `Max/Min: ${max}/${min} • Ortalama: ${avg.toFixed(1)} • Haftalık: ${total}`));
     text.push(`Max/Min: ${max}/${min}, ort ${avg.toFixed(1)}`);

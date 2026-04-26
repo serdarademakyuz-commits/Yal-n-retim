@@ -238,7 +238,7 @@ const Audit = {
           <div class="kpi danger"><div class="label">Uygunsuz + Majör</div><div class="value">${s.fail + s.major}</div></div>
           <div class="kpi"><div class="label">N/A</div><div class="value">${s.na}</div></div>
           <div class="kpi"><div class="label">Bekleyen</div><div class="value">${s.pending}</div></div>
-          <div class="kpi ${s.pct>=80?"success":s.pct>=60?"amber":"danger"}"><div class="label">Skor</div><div class="value">${s.pct}%</div></div>
+          <div class="kpi ${s.pct>=Targets.get("audit.target")?"success":s.pct>=Targets.get("audit.acceptable")?"amber":"danger"}"><div class="label">Skor</div><div class="value">${s.pct}%</div></div>
         </div>
       </div>
     `;
@@ -278,7 +278,7 @@ const Audit = {
     if (!list.length) { wrap.innerHTML = UI.emptyState("📋", "Henüz denetim yok."); return; }
     wrap.innerHTML = list.map(it => {
       const s = it.score || this.score(it.items || []);
-      const tone = s.pct >= 80 ? "success" : s.pct >= 60 ? "amber" : "danger";
+      const tone = s.pct >= Targets.get("audit.target") ? "success" : s.pct >= Targets.get("audit.acceptable") ? "amber" : "danger";
       return `
         <div class="list-item" data-id="${it.id}">
           <div class="li-main">

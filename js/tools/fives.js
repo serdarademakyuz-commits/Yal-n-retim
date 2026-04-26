@@ -164,9 +164,10 @@ const Fives = {
     const weakest = entries[0];
     const total = entries.reduce((s, x) => s + x.v, 0);
     const pct = (total / 20) * 100;
-    if (pct >= 80) insights.push(Analyze.insight("success", `5S skoru %${pct.toFixed(0)} — Mükemmel`, "Standartlar iyi kurulmuş; disiplini sürdürün."));
-    else if (pct >= 60) insights.push(Analyze.insight("warn", `5S skoru %${pct.toFixed(0)} — İyi ama geliştirilebilir`, "Standartlaştırma ve disiplin üzerine yoğunlaşın."));
-    else insights.push(Analyze.insight("danger", `5S skoru %${pct.toFixed(0)} — Aksiyon gerekli`, "60% altı ciddi eksiklik; temel 3S (Ayıkla-Düzenle-Temizle) öncelikli."));
+    const tgt = Targets.get("fives.target"), accept = Targets.get("fives.acceptable");
+    if (pct >= tgt) insights.push(Analyze.insight("success", `5S skoru %${pct.toFixed(0)} ≥ hedef %${tgt}`, "Standartlar iyi kurulmuş; disiplini sürdürün."));
+    else if (pct >= accept) insights.push(Analyze.insight("warn", `5S skoru %${pct.toFixed(0)} (hedef %${tgt})`, "Standartlaştırma ve disiplin üzerine yoğunlaşın."));
+    else insights.push(Analyze.insight("danger", `5S skoru %${pct.toFixed(0)} — kabul eşiği %${accept} altında`, "Temel 3S (Ayıkla-Düzenle-Temizle) öncelikli."));
     text.push(`5S skoru: %${pct.toFixed(0)} (${total}/20)`);
     if (weakest) {
       insights.push(Analyze.insight("action", `En zayıf adım: ${weakest.n}`, `Puan: ${weakest.v}/4. Bu adıma özel aksiyon planı oluşturun.`));

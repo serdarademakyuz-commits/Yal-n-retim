@@ -86,7 +86,7 @@ const OEE = {
         <div class="li-main">
           <div class="li-title">📐 Detay</div>
           <div class="li-sub">Çalışma: ${runTime} dk • İyi ürün: ${good} • Kusur: ${defect}</div>
-          <div class="li-sub">Dünya klası: OEE ≥ 85% • Tipik: 40-60%</div>
+          <div class="li-sub">Kuruluş hedefi: ${Targets.get("oee.target")}% • Kabul eşiği: ${Targets.get("oee.acceptable")}%</div>
           <div class="li-sub">🎯 Hedef: ${target}% → ${oee*100 >= target ? "✅ Başarıldı" : "❌ Hedefin altında"}</div>
         </div>
       </div>

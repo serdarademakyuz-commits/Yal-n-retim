@@ -215,10 +215,11 @@ const SPC = {
     if (c.outOfControl) insights.push(Analyze.insight("danger", "Proses kontrol dışı", "En az bir nokta kontrol limitlerini aştı — özel sebepleri araştırın."));
     else insights.push(Analyze.insight("success", "Proses kontrol altında", "Tüm noktalar kontrol limitleri içinde."));
     if (c.Cpk != null) {
+      const cpkExc = Targets.get("spc.cpkExcellent"), cpkMin = Targets.get("spc.cpkMin");
       let cpkLevel = "danger", label = "Yetersiz yetenek";
-      if (c.Cpk >= 1.67) { cpkLevel = "success"; label = "Mükemmel yetenek"; }
-      else if (c.Cpk >= 1.33) { cpkLevel = "success"; label = "Yeterli yetenek"; }
-      else if (c.Cpk >= 1.00) { cpkLevel = "warn"; label = "Sınırda yetenek"; }
+      if (c.Cpk >= cpkExc) { cpkLevel = "success"; label = `Mükemmel yetenek (≥ ${cpkExc})`; }
+      else if (c.Cpk >= cpkMin) { cpkLevel = "success"; label = `Yeterli yetenek (≥ ${cpkMin})`; }
+      else if (c.Cpk >= 1.00) { cpkLevel = "warn"; label = `Sınırda yetenek (< ${cpkMin})`; }
       insights.push(Analyze.insight(cpkLevel, `${label} — Cpk = ${c.Cpk.toFixed(2)}`, `Cp = ${c.Cp.toFixed(2)}, Cpu = ${c.Cpu.toFixed(2)}, Cpl = ${c.Cpl.toFixed(2)}`));
       if (c.Cp && c.Cpk < c.Cp - 0.2) insights.push(Analyze.insight("warn", "Proses ortalaması merkezde değil", "Hedefin merkezine çekin (Cp > Cpk farkı belirgin)."));
     } else {
