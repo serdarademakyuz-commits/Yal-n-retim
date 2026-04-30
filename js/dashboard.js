@@ -394,7 +394,7 @@ const Dashboard = {
       pillar("cost", "💰", "Cost", Math.round(kpis.kaizenTotal / 1000), null, "k₺/yıl", "Maliyet & Kazanım",
         trendDir(kaizenTrend),
         costState,
-        `${kpis.kaizenCount} kaizen · hedef: ${Targets.get("kaizen.yearlyTarget")} / yıl`),
+        `${kpis.kaizenCount} kaizen · yıllık hedef ${Targets.get("kaizen.yearlyTarget")}`),
       pillar("people", "👥", "People", kpis.fivesPct, Targets.get("fives.target"), "%", "İnsan & 5S",
         trendDir(fivesTrend),
         peopleState,
