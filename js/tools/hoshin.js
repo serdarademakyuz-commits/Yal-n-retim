@@ -257,6 +257,8 @@ const Hoshin = {
     if (pr > 0 && tg === 0) insights.push(Analyze.insight("warn", "Öncelikler var ama ölçüm yok", "Her öncelik için ölçülebilir metrik tanımlayın."));
     if (bt > 5) insights.push(Analyze.insight("warn", "Çok fazla atılım", "3-5 ile sınırlayın, odak kaybolmasın."));
     text.push(`bt=${bt} an=${an} pr=${pr} tg=${tg}`);
+    const ti = Targets.periodInsight(records, "year", "hoshin.yearlyBreakthroughs");
+    if (ti) insights.push(ti);
     return { insights, text };
   }
 };

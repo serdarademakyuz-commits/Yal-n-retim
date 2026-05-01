@@ -284,6 +284,10 @@ const Pareto = {
     if (!wrap) return;
     if (!this.state.items.length) { wrap.innerHTML = Analyze.empty("📊", "Veri girin, analiz otomatik oluşur."); return; }
     const a = this.analyze(this.state.items);
-    wrap.innerHTML = Analyze.card("🔍", "Otomatik Pareto Analizi", `<small style="color:var(--muted)">${a.summary}</small>`, a.insights.join(""), "");
+    /* Pareto's analyze() works on items not records — append a period-target
+       insight using saved records for the count. */
+    const ti = Targets.periodInsight(Storage.getAll(this.KEY), "month", "pareto.monthlyTarget");
+    const allInsights = a.insights.join("") + (ti || "");
+    wrap.innerHTML = Analyze.card("🔍", "Otomatik Pareto Analizi", `<small style="color:var(--muted)">${a.summary}</small>`, allInsights, "");
   }
 };

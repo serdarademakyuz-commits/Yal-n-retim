@@ -147,6 +147,8 @@ const A3 = {
       text.push(`Kritik eksik: ${missingCritical.length}`);
     }
     insights.push(Analyze.insight("info", `Toplam ${records.length} A3 raporu`, "Tekrar eden problem ailelerini belirleyin."));
+    const ti = Targets.periodInsight(records, "year", "a3.yearlyTarget");
+    if (ti) insights.push(ti);
     return { insights, text };
   },
 

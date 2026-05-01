@@ -113,5 +113,45 @@ const Targets = (function () {
 
   function resetAll() { Storage.setValue(KEY, {}); }
 
-  return { get, set, all, reset, resetAll, DEFAULTS, KEY };
+  /* Helper: count records that match the given period (month/year). */
+  function periodCount(records, period) {
+    const now = new Date();
+    if (period === "month") {
+      const cur = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
+      return (records || []).filter(r => {
+        const t = r.createdAt || r.updatedAt;
+        return t && new Date(t).toISOString().slice(0, 7) === cur;
+      }).length;
+    }
+    if (period === "year") {
+      const cy = now.getFullYear();
+      return (records || []).filter(r => {
+        const t = r.createdAt || r.updatedAt;
+        return t && new Date(t).getFullYear() === cy;
+      }).length;
+    }
+    return (records || []).length;
+  }
+
+  /* Helper: produces an Analyze.insight HTML string comparing this period's
+     record count against the user's target. Caller passes the explicit target
+     key so the helper works with any naming convention (e.g.
+     "gemba.monthlyWalks", "hoshin.yearlyBreakthroughs"). */
+  function periodInsight(records, period, targetKey) {
+    if (typeof Analyze === "undefined") return "";
+    if (!targetKey || DEFAULTS[targetKey] == null) return "";
+    const target = get(targetKey);
+    if (target == null || !isFinite(target) || target <= 0) return "";
+    const count = periodCount(records, period);
+    const lbl = period === "year" ? "Bu yıl" : "Bu ay";
+    if (count >= target) {
+      return Analyze.insight("success", `${lbl} hedefi tutturuldu`, `${count} / ${target} — disiplini sürdürün.`);
+    }
+    if (count >= Math.ceil(target / 2)) {
+      return Analyze.insight("warn", `${lbl} hedefin altında`, `${count} / ${target} — kalan dönemde tempo artırın.`);
+    }
+    return Analyze.insight("danger", `${lbl} hedefin çok altında`, `${count} / ${target} — uygulamayı yaygınlaştırın.`);
+  }
+
+  return { get, set, all, reset, resetAll, periodCount, periodInsight, DEFAULTS, KEY };
 })();

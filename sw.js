@@ -1,4 +1,4 @@
-const CACHE = "yalin-v31";
+const CACHE = "yalin-v32";
 const ASSETS = [
   "./",
   "./index.html",

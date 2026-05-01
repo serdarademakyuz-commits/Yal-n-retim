@@ -118,6 +118,8 @@ const RCA = {
     if (topMethod) insights.push(Analyze.insight("info", `En çok kullanılan yöntem: ${topMethod[0]}`, `${topMethod[1]} vaka. Tek yönteme aşırı bağlılıksa çeşitlendirin.`));
     insights.push(Analyze.insight("info", `${records.length} RCA kaydı`, "Benzer kök nedenleri gruplandırıp sistemik çözüm üretin."));
     text.push(`Kök: ${hasRoot ? "var" : "yok"}, düzeltici: ${hasCorrective ? "var" : "yok"}, önleyici: ${hasPreventive ? "var" : "yok"}`);
+    const ti = Targets.periodInsight(records, "month", "rca.monthlyTarget");
+    if (ti) insights.push(ti);
     return { insights, text };
   },
 

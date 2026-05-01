@@ -210,6 +210,8 @@ const Gemba = {
     if (topFocus) insights.push(Analyze.insight("info", `En çok odak: ${topFocus[0]} (${topFocus[1]})`, "Diğer SQDCP eksenlerine de Gemba yapın."));
     const withoutSummary = records.filter(r => !r.summary || r.summary.length < 5).length;
     if (withoutSummary > 0) insights.push(Analyze.insight("warn", `${withoutSummary} yürüyüşte özet yok`, "Her yürüyüş aksiyon ile kapanmalı."));
+    const ti = Targets.periodInsight(records, "month", "gemba.monthlyWalks");
+    if (ti) insights.push(ti);
     return { insights, text };
   },
 

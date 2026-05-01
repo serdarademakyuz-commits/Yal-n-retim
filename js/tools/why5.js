@@ -173,6 +173,8 @@ const Why5 = {
     if (hasRoot && hasAction && filled === 5) insights.push(Analyze.insight("success", "Analiz eksiksiz", "PDCA ile aksiyonları uygulayıp izleyin."));
     insights.push(Analyze.insight("info", `${records.length} kayıtlı analiz`, "Tekrar eden kök nedenleri Pareto ile değerlendirin."));
     text.push(`${filled}/5 neden, kök: ${hasRoot ? "var" : "yok"}, aksiyon: ${hasAction ? "var" : "yok"}`);
+    const ti = Targets.periodInsight(records, "month", "why5.monthlyTarget");
+    if (ti) insights.push(ti);
     return { insights, text };
   },
 

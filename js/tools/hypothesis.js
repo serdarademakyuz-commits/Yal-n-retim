@@ -388,6 +388,8 @@ const Hypothesis = {
     const sig = records.filter(r => r.result && r.result.reject).length;
     insights.push(Analyze.insight("info", `${records.length} test • ${sig} anlamlı`, "Anlamlı bulgular için DMAIC Improve fazına veri sağlayın."));
     text.push(`Toplam test: ${records.length}, Anlamlı: ${sig}`);
+    const ti = Targets.periodInsight(records, "month", "hypothesis.monthlyTarget");
+    if (ti) insights.push(ti);
     return { insights, text };
   },
 

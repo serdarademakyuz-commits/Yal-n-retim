@@ -155,6 +155,8 @@ const Muda = {
     const withSolution = records.filter(r => r.solution && r.solution.length > 3).length;
     if (withSolution < total) insights.push(Analyze.insight("warn", `${total - withSolution} kayıt çözümsüz`, "Her israf için somut karşı önlem tanımlayın, yoksa tespit kalıcı değer üretmez."));
     else if (total > 0) insights.push(Analyze.insight("success", "Tüm kayıtlar için çözüm tanımlı", "Uygulama ve izleme planına geçin."));
+    const ti = Targets.periodInsight(records, "month", "muda.monthlyTarget");
+    if (ti) insights.push(ti);
     return { insights, text };
   },
 

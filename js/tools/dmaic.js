@@ -200,6 +200,8 @@ const DMAIC = {
     const noTeam = records.filter(r => !r.members || !r.members.length).length;
     if (noTeam) insights.push(Analyze.insight("warn", `${noTeam} projede ekip tanımsız`, "DMAIC başarısı ekip katılımına bağlıdır."));
     text.push(`Projeler: ${records.length}, Kapanan: ${closed}, Tasarruf: ${totalSavings}`);
+    const ti = Targets.periodInsight(records, "year", "dmaic.yearlyTarget");
+    if (ti) insights.push(ti);
     return { insights, text };
   },
 

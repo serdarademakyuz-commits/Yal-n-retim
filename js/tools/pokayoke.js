@@ -122,6 +122,8 @@ const PokaYoke = {
     records.forEach(r => { if (r.type) typeCount[r.type] = (typeCount[r.type] || 0) + 1; });
     const topType = Object.entries(typeCount).sort((a, b) => b[1] - a[1])[0];
     if (topType) insights.push(Analyze.insight("info", `Baskın tür: ${topType[0]} (${topType[1]})`, "Çözüm çeşitliliği için diğer türleri de değerlendirin."));
+    const ti = Targets.periodInsight(records, "year", "pokayoke.yearlyTarget");
+    if (ti) insights.push(ti);
     return { insights, text };
   },
 

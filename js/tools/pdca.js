@@ -121,6 +121,8 @@ const PDCA = {
     const filled = ["plan", "do", "check", "act"].filter(k => latest[k] && latest[k].length > 3).length;
     if (filled === 4) insights.push(Analyze.insight("success", "Son döngü eksiksiz (PDCA)", "Standartlaştırma aşamasına geçebilirsiniz."));
     else insights.push(Analyze.insight("warn", `Son döngü ${filled}/4 dolu`, "Tüm 4 aşama doldurulmadan kapatma yapmayın."));
+    const ti = Targets.periodInsight(records, "month", "pdca.monthlyTarget");
+    if (ti) insights.push(ti);
     return { insights, text };
   },
 

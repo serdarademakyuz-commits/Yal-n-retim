@@ -216,6 +216,8 @@ const Fishbone = {
       insights.push(Analyze.insight("info", `En az neden: ${weakest.n} (${weakest.count})`, "Bu kategoride daha derin sorgulama yapın; eksik kalmış olabilir."));
     }
     insights.push(Analyze.insight("info", `Toplam ${total} neden, ${rows.filter(r => r.count > 0).length}/${rows.length} kategoride dolu`, "Kapsama ne kadar yüksek olursa o kadar güvenilir analiz."));
+    const ti = Targets.periodInsight(records, "month", "fishbone.monthlyTarget");
+    if (ti) insights.push(ti);
     return { insights, text };
   },
 
